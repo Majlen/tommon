@@ -1,0 +1,46 @@
+body, html {
+    height:100%;
+    margin:0;
+}
+#nav {
+    background-color:black;
+    color:white;
+    height:100%;
+    padding:0 5mm 0 2mm;
+    float:left;
+}
+#section {
+    overflow:auto;
+    padding:5mm;
+}
+#wrapper {
+    overflow:auto;
+    height:100%;
+}
+.bar {
+   width:100%;
+   overflow: auto;
+   padding: 5mm 0mm 5mm 0mm;
+}
+.legend {
+   float:left;
+}
+.boxes {
+   float:right;
+}
+a:link {
+   color: #ffffff;
+   text-decoration:none;
+}
+a:visited {
+   color: #ffffff;
+   text-decoration:none;
+}
+a:hover {
+   color: #ffffff;
+   text-decoration:underline;
+}
+a:active {
+   color: #ffffff;
+   text-decoration:underline;
+}
