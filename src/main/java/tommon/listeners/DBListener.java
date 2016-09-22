@@ -1,5 +1,7 @@
 package tommon.listeners;
 
+import tommon.managers.DBManager;
+
 import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
@@ -8,12 +10,13 @@ import java.util.Properties;
 
 public final class DBListener implements ServletContextListener {
     private ServletContext context = null;
+    private DBManager db;
 
     @Override
     public void contextDestroyed(ServletContextEvent event) {
         this.context = null;
         try {
-            tommon.managers.DBManager.DBDisconnect();
+            db.close();
         } catch (Exception e) {
             System.out.println("Error: "+e.getMessage());
         }
@@ -36,8 +39,8 @@ public final class DBListener implements ServletContextListener {
         }
 
         try {
-            Connection connection = tommon.managers.DBManager.DBConnect(dburl ,"org.sqlite.JDBC");
-            context.setAttribute("db", connection);
+            db = new DBManager(dburl ,"org.sqlite.JDBC");
+            context.setAttribute("db", db);
         } catch (Exception e) {
             System.out.println("Error: "+e.getMessage());
         }

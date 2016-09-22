@@ -1,5 +1,6 @@
 package tommon.listeners;
 
+import tommon.managers.DBManager;
 import tommon.managers.PluginsManager;
 import tommon.plugins.PluginConfig;
 import tommon.servlets.PluginAPIServlet;
@@ -34,6 +35,7 @@ public final class PluginsListener implements ServletContextListener {
     @Override
     public void contextInitialized(ServletContextEvent event) {
         this.context = event.getServletContext();
+        DBManager db = (DBManager)context.getAttribute("db");
 
         try {
             Properties properties = new Properties();
@@ -42,7 +44,7 @@ public final class PluginsListener implements ServletContextListener {
             pluginsDir = pluginsDir.replace("${catalina.base}", System.getProperty("catalina.base"));
 	        System.out.println(pluginsDir);
 
-            plugins = PluginsManager.getPlugins(context.getClassLoader(), pluginsDir);
+            plugins = PluginsManager.getPlugins(context.getClassLoader(), pluginsDir, db);
             for (PluginConfig plugin: plugins) {
                 registerServlet(plugin);
             }
