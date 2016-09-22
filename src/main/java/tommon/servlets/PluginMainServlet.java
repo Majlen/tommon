@@ -1,7 +1,5 @@
 package tommon.servlets;
 
-import tommon.managers.DBManager;
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -17,7 +15,6 @@ public class PluginMainServlet extends PluginServlet {
     public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
 
         request.setAttribute("reqName", config.getName());
-        request.setAttribute("reqMsg", DBManager.DBgetMessage(config.getTable()));
         request.setAttribute("reqStates", config.getFields());
 
         getServletContext().getNamedDispatcher("graphTemplate").forward(request, response);    }
