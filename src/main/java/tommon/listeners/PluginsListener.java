@@ -10,14 +10,11 @@ import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.ServletRegistration;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Properties;
 
 public final class PluginsListener implements ServletContextListener {
     private ServletContext context = null;
 
-    ArrayList<String> names = new ArrayList<String>();
-    //TODO: This should replace the 2 lists above
     PluginConfig[] plugins = null;
 
     @Override
@@ -53,7 +50,7 @@ public final class PluginsListener implements ServletContextListener {
             System.out.println("ERROR: tommon.properties is non-existent or cannot be accessed");
             System.out.println(e.getMessage());
         }
-        context.setAttribute("pluginNames", names);
+        context.setAttribute("plugins", plugins);
     }
 
     private void registerServlet(PluginConfig config) {
@@ -70,7 +67,5 @@ public final class PluginsListener implements ServletContextListener {
         dyn = context.addServlet(config.getName(), main);
         dyn.setLoadOnStartup(2);
         dyn.addMapping("/"+config.getName());
-
-        names.add(config.getName());
     }
 }

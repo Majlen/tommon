@@ -14,10 +14,10 @@
 
 <div id="nav">
 <br>
-<c:forEach items="${pluginNames}" var="name">
-<!--<a href="${name}">${name}</a><br />-->
-<input type=checkbox class="chartBox" id="${name}_selector" data-chart="${name}" onClick="select_chart(this)">
-<label for="${name}_selector">${name}</label><br>
+<c:forEach items="${plugins}" var="plugin">
+<!--<a href="${plugin.name}">${name}</a><br />-->
+<input type=checkbox class="chartBox" id="${plugin.name}_selector" data-chart="${plugin.name}" onClick="select_chart(this)">
+<label for="${plugin.name}_selector">${name}</label><br>
 </c:forEach>
 </div>
 <div id="wrapper">
