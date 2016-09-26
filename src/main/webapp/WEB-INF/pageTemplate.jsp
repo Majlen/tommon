@@ -15,9 +15,8 @@
 <div id="nav">
 <br>
 <c:forEach items="${plugins}" var="plugin">
-<!--<a href="${plugin.name}">${name}</a><br />-->
 <input type=checkbox class="chartBox" id="${plugin.name}_selector" data-chart="${plugin.name}" onClick="select_chart(this)">
-<label for="${plugin.name}_selector">${name}</label><br>
+<label for="${plugin.name}_selector">${plugin.name}</label><br>
 </c:forEach>
 </div>
 <div id="wrapper">
