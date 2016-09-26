@@ -21,7 +21,15 @@ public class PluginAPIServlet extends PluginServlet {
         response.setContentType("text/csv");
         PrintWriter out = response.getWriter();
 
-        DBManager.printTableCSV(config.getTable(), config.getFields(), from, to, out);
+        DBManager db = (DBManager) getServletContext().getAttribute("db");
+        try {
+            db.printTableCSV(config.getTable(), config.getFields(), from, to, out);
+        } catch (Exception e) {
+            System.out.println("ERROR: Could not acces data in DB");
+            System.out.println(e.getMessage());
+            return;
+        }
 
-        out.flush();    }
+        out.flush();
+    }
 }
