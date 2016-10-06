@@ -71,7 +71,7 @@ public final class DBManager implements StorageManager {
 
     public int getMinimumDate(String table) throws SQLException {
         Statement s = sqlcon.createStatement();
-        ResultSet rs = s.executeQuery("SELECT min(date) AS date FROM " + table + ";");
+        ResultSet rs = s.executeQuery("SELECT date FROM " + table + " ORDER BY ROWID ASC LIMIT 1;");
         return rs.getInt("date");
     }
 
