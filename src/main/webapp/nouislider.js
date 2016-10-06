@@ -1,7 +1,4 @@
-/*! nouislider - 8.0.2 - 2015-07-06 13:22:09 */
-
-/*jslint browser: true */
-/*jslint white: true */
+/*! nouislider - 9.0.0 - 2016-09-29 21:44:02 */
 
 (function (factory) {
 
@@ -12,13 +9,8 @@
 
     } else if ( typeof exports === 'object' ) {
 
-        var fs = require('fs');
-
         // Node/CommonJS
         module.exports = factory();
-        module.exports.css = function () {
-            return fs.readFileSync(__dirname + '/nouislider.min.css', 'utf8');
-        };
 
     } else {
 
@@ -31,8 +23,16 @@
 	'use strict';
 
 
+	// Creates a node, adds it to target, returns the new node.
+	function addNodeTo ( target, className ) {
+		var div = document.createElement('div');
+		addClass(div, className);
+		target.appendChild(div);
+		return div;
+	}
+
 	// Removes duplicates from an array.
-	function unique(array) {
+	function unique ( array ) {
 		return array.filter(function(a){
 			return !this[a] ? this[a] = true : false;
 		}, {});
@@ -44,25 +44,21 @@
 	}
 
 	// Current position of an element relative to the document.
-	function offset ( elem ) {
+	function offset ( elem, orientation ) {
 
 	var rect = elem.getBoundingClientRect(),
 		doc = elem.ownerDocument,
-		win = doc.defaultView || doc.parentWindow,
 		docElem = doc.documentElement,
-		xOff = win.pageXOffset;
+		pageOffset = getPageOffset();
 
 		// getBoundingClientRect contains left scroll in Chrome on Android.
 		// I haven't found a feature detection that proves this. Worst case
 		// scenario on mis-match: the 'tap' feature on horizontal sliders breaks.
 		if ( /webkit.*Chrome.*Mobile/i.test(navigator.userAgent) ) {
-			xOff = 0;
+			pageOffset.x = 0;
 		}
 
-		return {
-			top: rect.top + win.pageYOffset - docElem.clientTop,
-			left: rect.left + xOff - docElem.clientLeft
-		};
+		return orientation ? (rect.top + pageOffset.y - docElem.clientTop) : (rect.left + pageOffset.x - docElem.clientLeft);
 	}
 
 	// Checks whether a value is numerical.
@@ -70,18 +66,14 @@
 		return typeof a === 'number' && !isNaN( a ) && isFinite( a );
 	}
 
-	// Rounds a number to 7 supported decimals.
-	function accurateNumber( number ) {
-		var p = Math.pow(10, 7);
-		return Number((Math.round(number*p)/p).toFixed(7));
-	}
-
 	// Sets a class and removes it after [duration] ms.
 	function addClassFor ( element, className, duration ) {
+		if (duration > 0) {
 		addClass(element, className);
-		setTimeout(function(){
-			removeClass(element, className);
-		}, duration);
+			setTimeout(function(){
+				removeClass(element, className);
+			}, duration);
+		}
 	}
 
 	// Limits a value to 0 - 100
@@ -90,12 +82,14 @@
 	}
 
 	// Wraps a variable as an array, if it isn't one yet.
+	// Note that an input array is returned by reference!
 	function asArray ( a ) {
 		return Array.isArray(a) ? a : [a];
 	}
 
 	// Counts decimals
 	function countDecimals ( numStr ) {
+		numStr = String(numStr);
 		var pieces = numStr.split(".");
 		return pieces.length > 1 ? pieces[1].length : 0;
 	}
@@ -118,55 +112,46 @@
 		}
 	}
 
-	// http://youmightnotneedjquery.com/#has_class
+	// https://plainjs.com/javascript/attributes/adding-removing-and-testing-for-classes-9/
 	function hasClass ( el, className ) {
-		if ( el.classList ) {
-			el.classList.contains(className);
-		} else {
-			new RegExp('(^| )' + className + '( |$)', 'gi').test(el.className);
-		}
+		return el.classList ? el.classList.contains(className) : new RegExp('\\b' + className + '\\b').test(el.className);
 	}
 
+	// https://developer.mozilla.org/en-US/docs/Web/API/Window/scrollY#Notes
+	function getPageOffset ( ) {
 
-	var
-	// Determine the events to bind. IE11 implements pointerEvents without
-	// a prefix, which breaks compatibility with the IE10 implementation.
-	/** @const */
-	actions = window.navigator.pointerEnabled ? {
-		start: 'pointerdown',
-		move: 'pointermove',
-		end: 'pointerup'
-	} : window.navigator.msPointerEnabled ? {
-		start: 'MSPointerDown',
-		move: 'MSPointerMove',
-		end: 'MSPointerUp'
-	} : {
-		start: 'mousedown touchstart',
-		move: 'mousemove touchmove',
-		end: 'mouseup touchend'
-	},
-	// Re-usable list of classes;
-	/** @const */
-	Classes = [
-/*  0 */  'noUi-target'
-/*  1 */ ,'noUi-base'
-/*  2 */ ,'noUi-origin'
-/*  3 */ ,'noUi-handle'
-/*  4 */ ,'noUi-horizontal'
-/*  5 */ ,'noUi-vertical'
-/*  6 */ ,'noUi-background'
-/*  7 */ ,'noUi-connect'
-/*  8 */ ,'noUi-ltr'
-/*  9 */ ,'noUi-rtl'
-/* 10 */ ,'noUi-dragable'
-/* 11 */ ,''
-/* 12 */ ,'noUi-state-drag'
-/* 13 */ ,''
-/* 14 */ ,'noUi-state-tap'
-/* 15 */ ,'noUi-active'
-/* 16 */ ,''
-/* 17 */ ,'noUi-stacking'
-	];
+		var supportPageOffset = window.pageXOffset !== undefined,
+			isCSS1Compat = ((document.compatMode || "") === "CSS1Compat"),
+			x = supportPageOffset ? window.pageXOffset : isCSS1Compat ? document.documentElement.scrollLeft : document.body.scrollLeft,
+			y = supportPageOffset ? window.pageYOffset : isCSS1Compat ? document.documentElement.scrollTop : document.body.scrollTop;
+
+		return {
+			x: x,
+			y: y
+		};
+	}
+
+	// we provide a function to compute constants instead
+	// of accessing window.* as soon as the module needs it
+	// so that we do not compute anything if not needed
+	function getActions ( ) {
+
+		// Determine the events to bind. IE11 implements pointerEvents without
+		// a prefix, which breaks compatibility with the IE10 implementation.
+		return window.navigator.pointerEnabled ? {
+			start: 'pointerdown',
+			move: 'pointermove',
+			end: 'pointerup'
+		} : window.navigator.msPointerEnabled ? {
+			start: 'MSPointerDown',
+			move: 'MSPointerMove',
+			end: 'MSPointerUp'
+		} : {
+			start: 'mousedown touchstart',
+			move: 'mousemove touchmove',
+			end: 'mouseup touchend'
+		};
+	}
 
 
 // Value calculation
@@ -320,6 +305,8 @@
 		} else {
 			that.xSteps.push( isNaN(value[1]) ? false : value[1] );
 		}
+
+		that.xHighestCompleteStep.push(0);
 	}
 
 	function handleStepPoint ( i, n, that ) {
@@ -336,6 +323,12 @@
 		], n) / subRangeRatio (
 			that.xPct[i],
 			that.xPct[i+1] );
+
+		var totalSteps = (that.xVal[i+1] - that.xVal[i]) / that.xNumSteps[i];
+		var highestStep = Math.ceil(Number(totalSteps.toFixed(3)) - 1);
+		var step = that.xVal[i] + (that.xNumSteps[i] * highestStep);
+
+		that.xHighestCompleteStep[i] = step;
 	}
 
 
@@ -350,6 +343,7 @@
 		this.xVal = [];
 		this.xSteps = [ singleStep || false ];
 		this.xNumSteps = [ false ];
+		this.xHighestCompleteStep = [];
 
 		this.snap = snap;
 		this.direction = direction;
@@ -364,7 +358,12 @@
 		}
 
 		// Sort all entries by value (numeric sort).
-		ordered.sort(function(a, b) { return a[0] - b[0]; });
+		if ( ordered.length && typeof ordered[0][0] === "object" ) {
+			ordered.sort(function(a, b) { return a[0][0] - b[0][0]; });
+		} else {
+			ordered.sort(function(a, b) { return a[0] - b[0]; });
+		}
+
 
 		// Convert all entries to subranges.
 		for ( index = 0; index < ordered.length; index++ ) {
@@ -382,6 +381,13 @@
 	}
 
 	Spectrum.prototype.getMargin = function ( value ) {
+
+		var step = this.xNumSteps[0];
+
+		if ( step && (value % step) ) {
+			throw new Error("noUiSlider: 'limit' and 'margin' must be divisible by step.");
+		}
+
 		return this.xPct.length === 2 ? fromPercentage(this.xVal, value) : false;
 	};
 
@@ -389,47 +395,36 @@
 
 		value = toStepping( this.xVal, this.xPct, value );
 
-		// Invert the value if this is a right-to-left slider.
-		if ( this.direction ) {
-			value = 100 - value;
-		}
-
 		return value;
 	};
 
 	Spectrum.prototype.fromStepping = function ( value ) {
 
-		// Invert the value if this is a right-to-left slider.
-		if ( this.direction ) {
-			value = 100 - value;
-		}
-
-		return accurateNumber(fromStepping( this.xVal, this.xPct, value ));
+		return fromStepping( this.xVal, this.xPct, value );
 	};
 
 	Spectrum.prototype.getStep = function ( value ) {
 
-		// Find the proper step for rtl sliders by search in inverse direction.
-		// Fixes issue #262.
-		if ( this.direction ) {
-			value = 100 - value;
-		}
-
 		value = getStep(this.xPct, this.xSteps, this.snap, value );
-
-		if ( this.direction ) {
-			value = 100 - value;
-		}
 
 		return value;
 	};
 
-	Spectrum.prototype.getApplicableStep = function ( value ) {
+	Spectrum.prototype.getNearbySteps = function ( value ) {
 
-		// If the value is 100%, return the negative step twice.
-		var j = getJ(value, this.xPct), offset = value === 100 ? 2 : 1;
-		return [this.xNumSteps[j-2], this.xVal[j-offset], this.xNumSteps[j-offset]];
+		var j = getJ(value, this.xPct);
+
+		return {
+			stepBefore: { startValue: this.xVal[j-2], step: this.xNumSteps[j-2], highestStep: this.xHighestCompleteStep[j-2] },
+			thisStep: { startValue: this.xVal[j-1], step: this.xNumSteps[j-1], highestStep: this.xHighestCompleteStep[j-1] },
+			stepAfter: { startValue: this.xVal[j-0], step: this.xNumSteps[j-0], highestStep: this.xHighestCompleteStep[j-0] }
+		};
 	};
+
+	Spectrum.prototype.countStepDecimals = function () {
+		var stepDecimals = this.xNumSteps.map(countDecimals);
+		return Math.max.apply(null, stepDecimals);
+ 	};
 
 	// Outside testing
 	Spectrum.prototype.convert = function ( value ) {
@@ -450,7 +445,7 @@
 	object, to make sure all values can be correctly looped elsewhere. */
 
 	var defaultFormatter = { 'to': function( value ){
-		return value.toFixed(2);
+		return value !== undefined && value.toFixed(2);
 	}, 'from': Number };
 
 	function testStep ( parsed, entry ) {
@@ -476,6 +471,11 @@
 			throw new Error("noUiSlider: Missing 'min' or 'max' in 'range'.");
 		}
 
+		// Catch equal start or end.
+		if ( entry.min === entry.max ) {
+			throw new Error("noUiSlider: 'range' 'min' and 'max' cannot be equal.");
+		}
+
 		parsed.spectrum = new Spectrum(entry, parsed.snap, parsed.dir, parsed.singleStep);
 	}
 
@@ -485,7 +485,7 @@
 
 		// Validate input. Values aren't tested, as the public .val method
 		// will always provide a valid location.
-		if ( !Array.isArray( entry ) || !entry.length || entry.length > 2 ) {
+		if ( !Array.isArray( entry ) || !entry.length ) {
 			throw new Error("noUiSlider: 'start' option is incorrect.");
 		}
 
@@ -517,19 +517,38 @@
 		}
 	}
 
+	function testAnimationDuration ( parsed, entry ) {
+
+		parsed.animationDuration = entry;
+
+		if ( typeof entry !== 'number' ){
+			throw new Error("noUiSlider: 'animationDuration' option must be a number.");
+		}
+	}
+
 	function testConnect ( parsed, entry ) {
 
-		if ( entry === 'lower' && parsed.handles === 1 ) {
-			parsed.connect = 1;
-		} else if ( entry === 'upper' && parsed.handles === 1 ) {
-			parsed.connect = 2;
-		} else if ( entry === true && parsed.handles === 2 ) {
-			parsed.connect = 3;
-		} else if ( entry === false ) {
-			parsed.connect = 0;
-		} else {
+		var connect = [false];
+		var i;
+
+		if ( entry === true || entry === false ) {
+
+			for ( i = 1; i < parsed.handles; i++ ) {
+				connect.push(entry);
+			}
+
+			connect.push(false);
+		}
+
+		else if ( !Array.isArray( entry ) || !entry.length || entry.length !== parsed.handles + 1 ) {
 			throw new Error("noUiSlider: 'connect' option doesn't match handle count.");
 		}
+
+		else {
+			connect = entry;
+		}
+
+		parsed.connect = connect;
 	}
 
 	function testOrientation ( parsed, entry ) {
@@ -554,6 +573,11 @@
 			throw new Error("noUiSlider: 'margin' option must be numeric.");
 		}
 
+		// Issue #582
+		if ( entry === 0 ) {
+			return;
+		}
+
 		parsed.margin = parsed.spectrum.getMargin(entry);
 
 		if ( !parsed.margin ) {
@@ -569,8 +593,8 @@
 
 		parsed.limit = parsed.spectrum.getMargin(entry);
 
-		if ( !parsed.limit ) {
-			throw new Error("noUiSlider: 'limit' option is only supported on linear sliders.");
+		if ( !parsed.limit || parsed.handles < 2 ) {
+			throw new Error("noUiSlider: 'limit' option is only supported on linear sliders with 2 or more handles.");
 		}
 	}
 
@@ -585,7 +609,6 @@
 			break;
 		  case 'rtl':
 			parsed.dir = 1;
-			parsed.connect = [0,2,1,3][parsed.connect];
 			break;
 		  default:
 			throw new Error("noUiSlider: 'direction' option was not recognized.");
@@ -601,17 +624,60 @@
 
 		// Check if the string contains any keywords.
 		// None are required.
-		var tap = entry.indexOf('tap') >= 0,
-			drag = entry.indexOf('drag') >= 0,
-			fixed = entry.indexOf('fixed') >= 0,
-			snap = entry.indexOf('snap') >= 0;
+		var tap = entry.indexOf('tap') >= 0;
+		var drag = entry.indexOf('drag') >= 0;
+		var fixed = entry.indexOf('fixed') >= 0;
+		var snap = entry.indexOf('snap') >= 0;
+		var hover = entry.indexOf('hover') >= 0;
+
+		if ( fixed ) {
+
+			if ( parsed.handles !== 2 ) {
+				throw new Error("noUiSlider: 'fixed' behaviour must be used with 2 handles");
+			}
+
+			// Use margin to enforce fixed state
+			testMargin(parsed, parsed.start[1] - parsed.start[0]);
+		}
 
 		parsed.events = {
 			tap: tap || snap,
 			drag: drag,
 			fixed: fixed,
-			snap: snap
+			snap: snap,
+			hover: hover
 		};
+	}
+
+	function testTooltips ( parsed, entry ) {
+
+		if ( entry === false ) {
+			return;
+		}
+
+		else if ( entry === true ) {
+
+			parsed.tooltips = [];
+
+			for ( var i = 0; i < parsed.handles; i++ ) {
+				parsed.tooltips.push(true);
+			}
+		}
+
+		else {
+
+			parsed.tooltips = asArray(entry);
+
+			if ( parsed.tooltips.length !== parsed.handles ) {
+				throw new Error("noUiSlider: must pass a formatter for all handles.");
+			}
+
+			parsed.tooltips.forEach(function(formatter){
+				if ( typeof formatter !== 'boolean' && (typeof formatter !== 'object' || typeof formatter.to !== 'function') ) {
+					throw new Error("noUiSlider: 'tooltips' must be passed a formatter or 'false'.");
+				}
+			});
+		}
 	}
 
 	function testFormat ( parsed, entry ) {
@@ -623,16 +689,57 @@
 			return true;
 		}
 
-		throw new Error( "noUiSlider: 'format' requires 'to' and 'from' methods.");
+		throw new Error("noUiSlider: 'format' requires 'to' and 'from' methods.");
+	}
+
+	function testCssPrefix ( parsed, entry ) {
+
+		if ( entry !== undefined && typeof entry !== 'string' && entry !== false ) {
+			throw new Error("noUiSlider: 'cssPrefix' must be a string or `false`.");
+		}
+
+		parsed.cssPrefix = entry;
+	}
+
+	function testCssClasses ( parsed, entry ) {
+
+		if ( entry !== undefined && typeof entry !== 'object' ) {
+			throw new Error("noUiSlider: 'cssClasses' must be an object.");
+		}
+
+		if ( typeof parsed.cssPrefix === 'string' ) {
+			parsed.cssClasses = {};
+
+			for ( var key in entry ) {
+				if ( !entry.hasOwnProperty(key) ) { continue; }
+
+				parsed.cssClasses[key] = parsed.cssPrefix + entry[key];
+			}
+		} else {
+			parsed.cssClasses = entry;
+		}
+	}
+
+	function testUseRaf ( parsed, entry ) {
+		if ( entry === true || entry === false ) {
+			parsed.useRequestAnimationFrame = entry;
+		} else {
+			throw new Error("noUiSlider: 'useRequestAnimationFrame' option should be true (default) or false.");
+		}
 	}
 
 	// Test all developer settings and parse to assumption-safe values.
 	function testOptions ( options ) {
 
+		// To prove a fix for #537, freeze options here.
+		// If the object is modified, an error will be thrown.
+		// Object.freeze(options);
+
 		var parsed = {
 			margin: 0,
 			limit: 0,
 			animate: true,
+			animationDuration: 300,
 			format: defaultFormatter
 		}, tests;
 
@@ -644,199 +751,197 @@
 			'direction': { r: true, t: testDirection },
 			'snap': { r: false, t: testSnap },
 			'animate': { r: false, t: testAnimate },
+			'animationDuration': { r: false, t: testAnimationDuration },
 			'range': { r: true, t: testRange },
 			'orientation': { r: false, t: testOrientation },
 			'margin': { r: false, t: testMargin },
 			'limit': { r: false, t: testLimit },
 			'behaviour': { r: true, t: testBehaviour },
-			'format': { r: false, t: testFormat }
+			'format': { r: false, t: testFormat },
+			'tooltips': { r: false, t: testTooltips },
+			'cssPrefix': { r: false, t: testCssPrefix },
+			'cssClasses': { r: false, t: testCssClasses },
+			'useRequestAnimationFrame': { r: false, t: testUseRaf }
 		};
 
 		var defaults = {
 			'connect': false,
 			'direction': 'ltr',
 			'behaviour': 'tap',
-			'orientation': 'horizontal'
+			'orientation': 'horizontal',
+			'cssPrefix' : 'noUi-',
+			'cssClasses': {
+				target: 'target',
+				base: 'base',
+				origin: 'origin',
+				handle: 'handle',
+				horizontal: 'horizontal',
+				vertical: 'vertical',
+				background: 'background',
+				connect: 'connect',
+				ltr: 'ltr',
+				rtl: 'rtl',
+				draggable: 'draggable',
+				drag: 'state-drag',
+				tap: 'state-tap',
+				active: 'active',
+				tooltip: 'tooltip',
+				pips: 'pips',
+				pipsHorizontal: 'pips-horizontal',
+				pipsVertical: 'pips-vertical',
+				marker: 'marker',
+				markerHorizontal: 'marker-horizontal',
+				markerVertical: 'marker-vertical',
+				markerNormal: 'marker-normal',
+				markerLarge: 'marker-large',
+				markerSub: 'marker-sub',
+				value: 'value',
+				valueHorizontal: 'value-horizontal',
+				valueVertical: 'value-vertical',
+				valueNormal: 'value-normal',
+				valueLarge: 'value-large',
+				valueSub: 'value-sub'
+			},
+			'useRequestAnimationFrame': true
 		};
-
-		// Set defaults where applicable.
-		Object.keys(defaults).forEach(function ( name ) {
-			if ( options[name] === undefined ) {
-				options[name] = defaults[name];
-			}
-		});
 
 		// Run all options through a testing mechanism to ensure correct
 		// input. It should be noted that options might get modified to
 		// be handled properly. E.g. wrapping integers in arrays.
 		Object.keys(tests).forEach(function( name ){
 
-			var test = tests[name];
-
 			// If the option isn't set, but it is required, throw an error.
-			if ( options[name] === undefined ) {
+			if ( options[name] === undefined && defaults[name] === undefined ) {
 
-				if ( test.r ) {
+				if ( tests[name].r ) {
 					throw new Error("noUiSlider: '" + name + "' is required.");
 				}
 
 				return true;
 			}
 
-			test.t( parsed, options[name] );
+			tests[name].t( parsed, options[name] === undefined ? defaults[name] : options[name] );
 		});
 
 		// Forward pips options
 		parsed.pips = options.pips;
 
+		var styles = [['left', 'top'], ['right', 'bottom']];
+
 		// Pre-define the styles.
-		parsed.style = parsed.ort ? 'top' : 'left';
+		parsed.style = styles[parsed.dir][parsed.ort];
+		parsed.styleOposite = styles[parsed.dir?0:1][parsed.ort];
 
 		return parsed;
 	}
 
 
-	// Delimit proposed values for handle positions.
-	function getPositions ( a, b, delimit ) {
+function closure ( target, options, originalOptions ){
 
-		// Add movement to current position.
-		var c = a + b[0], d = a + b[1];
+	var actions = getActions( );
 
-		// Only alter the other position on drag,
-		// not on standard sliding.
-		if ( delimit ) {
-			if ( c < 0 ) {
-				d += Math.abs(c);
-			}
-			if ( d > 100 ) {
-				c -= ( d - 100 );
-			}
+	// All variables local to 'closure' are prefixed with 'scope_'
+	var scope_Target = target;
+	var scope_Locations = [];
+	var scope_Base;
+	var scope_Handles;
+	var scope_HandleNumbers = [];
+	var scope_Connects;
+	var scope_Spectrum = options.spectrum;
+	var scope_Values = [];
+	var scope_Events = {};
+	var scope_Self;
 
-			// Limit values to 0 and 100.
-			return [limit(c), limit(d)];
-		}
 
-		return [c,d];
-	}
-
-	// Provide a clean event with standardized offset values.
-	function fixEvent ( e ) {
-
-		// Prevent scrolling and panning on touch events, while
-		// attempting to slide. The tap event also depends on this.
-		e.preventDefault();
-
-		// Filter the event to register the type, which can be
-		// touch, mouse or pointer. Offset changes need to be
-		// made on an event specific basis.
-		var touch = e.type.indexOf('touch') === 0,
-			mouse = e.type.indexOf('mouse') === 0,
-			pointer = e.type.indexOf('pointer') === 0,
-			x,y, event = e;
-
-		// IE10 implemented pointer events with a prefix;
-		if ( e.type.indexOf('MSPointer') === 0 ) {
-			pointer = true;
-		}
-
-		if ( touch ) {
-			// noUiSlider supports one movement at a time,
-			// so we can select the first 'changedTouch'.
-			x = e.changedTouches[0].pageX;
-			y = e.changedTouches[0].pageY;
-		}
-
-		if ( mouse || pointer ) {
-			x = e.clientX + window.pageXOffset;
-			y = e.clientY + window.pageYOffset;
-		}
-
-		event.points = [x, y];
-		event.cursor = mouse || pointer; // Fix #435
-
-		return event;
-	}
-
-	// Append a handle to the base.
-	function addHandle ( direction, index ) {
-
-		var origin = document.createElement('div'),
-			handle = document.createElement('div'),
-			additions = [ '-lower', '-upper' ];
-
-		if ( direction ) {
-			additions.reverse();
-		}
-
-		addClass(handle, Classes[3]);
-		addClass(handle, Classes[3] + additions[index]);
-
-		addClass(origin, Classes[2]);
-		origin.appendChild(handle);
-
+	// Append a origin to the base
+	function addOrigin ( base, handleNumber ) {
+		var origin = addNodeTo(base, options.cssClasses.origin);
+		var handle = addNodeTo(origin, options.cssClasses.handle);
+		handle.setAttribute('data-handle', handleNumber);
 		return origin;
 	}
 
-	// Add the proper connection classes.
-	function addConnection ( connect, target, handles ) {
+	// Insert nodes for connect elements
+	function addConnect ( base, add ) {
 
-		// Apply the required connection classes to the elements
-		// that need them. Some classes are made up for several
-		// segments listed in the class list, to allow easy
-		// renaming and provide a minor compression benefit.
-		switch ( connect ) {
-			case 1:	addClass(target, Classes[7]);
-					addClass(handles[0], Classes[6]);
-					break;
-			case 3: addClass(handles[1], Classes[6]);
-					/* falls through */
-			case 2: addClass(handles[0], Classes[7]);
-					/* falls through */
-			case 0: addClass(target, Classes[6]);
-					break;
+		if ( !add ) {
+			return false;
 		}
+
+		return addNodeTo(base, options.cssClasses.connect);
 	}
 
 	// Add handles to the slider base.
-	function addHandles ( nrHandles, direction, base ) {
+	function addElements ( connectOptions, base ) {
 
-		var index, handles = [];
+		scope_Handles = [];
+		scope_Connects = [];
 
-		// Append handles.
-		for ( index = 0; index < nrHandles; index += 1 ) {
+		scope_Connects.push(addConnect(base, connectOptions[0]));
 
+		// [::::O====O====O====]
+		// connectOptions = [0, 1, 1, 1]
+
+		for ( var i = 0; i < options.handles; i++ ) {
 			// Keep a list of all added handles.
-			handles.push( base.appendChild(addHandle( direction, index )) );
+			scope_Handles.push(addOrigin(base, i));
+			scope_HandleNumbers[i] = i;
+			scope_Connects.push(addConnect(base, connectOptions[i + 1]));
 		}
-
-		return handles;
 	}
 
 	// Initialize a single slider.
-	function addSlider ( direction, orientation, target ) {
+	function addSlider ( target ) {
 
 		// Apply classes and data to the target.
-		addClass(target, Classes[0]);
-		addClass(target, Classes[8 + direction]);
-		addClass(target, Classes[4 + orientation]);
+		addClass(target, options.cssClasses.target);
 
-		var div = document.createElement('div');
-		addClass(div, Classes[1]);
-		target.appendChild(div);
-		return div;
+		if ( options.dir === 0 ) {
+			addClass(target, options.cssClasses.ltr);
+		} else {
+			addClass(target, options.cssClasses.rtl);
+		}
+
+		if ( options.ort === 0 ) {
+			addClass(target, options.cssClasses.horizontal);
+		} else {
+			addClass(target, options.cssClasses.vertical);
+		}
+
+		scope_Base = addNodeTo(target, options.cssClasses.base);
 	}
 
 
-function closure ( target, options ){
+	function addTooltip ( handle, handleNumber ) {
 
-	// All variables local to 'closure' are prefixed with 'scope_'
-	var scope_Target = target,
-		scope_Locations = [-1, -1],
-		scope_Base,
-		scope_Handles,
-		scope_Spectrum = options.spectrum,
-		scope_Values = [],
-		scope_Events = {};
+		if ( !options.tooltips[handleNumber] ) {
+			return false;
+		}
+
+		return addNodeTo(handle.firstChild, options.cssClasses.tooltip);
+	}
+
+	// The tooltips option is a shorthand for using the 'update' event.
+	function tooltips ( ) {
+
+		// Tooltips are added with options.tooltips in original order.
+		var tips = scope_Handles.map(addTooltip);
+
+		bindEvent('update', function(values, handleNumber, unencoded) {
+
+			if ( !tips[handleNumber] ) {
+				return;
+			}
+
+			var formattedValue = values[handleNumber];
+
+			if ( options.tooltips[handleNumber] !== true ) {
+				formattedValue = options.tooltips[handleNumber].to(unencoded[handleNumber]);
+			}
+
+			tips[handleNumber].innerHTML = formattedValue;
+		});
+	}
 
 
 	function getGroup ( mode, values, stepped ) {
@@ -888,18 +993,17 @@ function closure ( target, options ){
 
 	function generateSpread ( density, mode, group ) {
 
-		var originalSpectrumDirection = scope_Spectrum.direction,
-			indexes = {},
+		function safeIncrement(value, increment) {
+			// Avoid floating point variance by dropping the smallest decimal places.
+			return (value + increment).toFixed(7) / 1;
+		}
+
+		var indexes = {},
 			firstInRange = scope_Spectrum.xVal[0],
 			lastInRange = scope_Spectrum.xVal[scope_Spectrum.xVal.length-1],
 			ignoreFirst = false,
 			ignoreLast = false,
 			prevPct = 0;
-
-		// This function loops the spectrum in an ltr linear fashion,
-		// while the toStepping method is direction aware. Trick it into
-		// believing it is ltr.
-		scope_Spectrum.direction = 0;
 
 		// Create a copy of the group, sort it and filter away all duplicates.
 		group = unique(group.slice().sort(function(a, b){ return a - b; }));
@@ -942,8 +1046,11 @@ function closure ( target, options ){
 				return;
 			}
 
+			// Make sure step isn't 0, which would cause an infinite loop (#654)
+			step = Math.max(step, 0.0000001);
+
 			// Find all steps in the subrange.
-			for ( i = low; i <= high; i += step ) {
+			for ( i = low; i <= high; i = safeIncrement(i, step) ) {
 
 				// Get the percentage value for the current step,
 				// calculate the size for the subrange.
@@ -989,46 +1096,58 @@ function closure ( target, options ){
 			}
 		});
 
-		// Reset the spectrum.
-		scope_Spectrum.direction = originalSpectrumDirection;
-
 		return indexes;
 	}
 
 	function addMarking ( spread, filterFunc, formatter ) {
 
-		var style = ['horizontal', 'vertical'][options.ort],
-			element = document.createElement('div');
+		var element = document.createElement('div'),
+			out = '',
+			valueSizeClasses = [
+				options.cssClasses.valueNormal,
+				options.cssClasses.valueLarge,
+				options.cssClasses.valueSub
+			],
+			markerSizeClasses = [
+				options.cssClasses.markerNormal,
+				options.cssClasses.markerLarge,
+				options.cssClasses.markerSub
+			],
+			valueOrientationClasses = [
+				options.cssClasses.valueHorizontal,
+				options.cssClasses.valueVertical
+			],
+			markerOrientationClasses = [
+				options.cssClasses.markerHorizontal,
+				options.cssClasses.markerVertical
+			];
 
-		addClass(element, 'noUi-pips');
-		addClass(element, 'noUi-pips-' + style);
+		addClass(element, options.cssClasses.pips);
+		addClass(element, options.ort === 0 ? options.cssClasses.pipsHorizontal : options.cssClasses.pipsVertical);
 
-		function getSize( type ){
-			return [ '-normal', '-large', '-sub' ][type];
+		function getClasses( type, source ){
+			var a = source === options.cssClasses.value,
+				orientationClasses = a ? valueOrientationClasses : markerOrientationClasses,
+				sizeClasses = a ? valueSizeClasses : markerSizeClasses;
+
+			return source + ' ' + orientationClasses[options.ort] + ' ' + sizeClasses[type];
 		}
 
 		function getTags( offset, source, values ) {
-			return 'class="' + source + ' ' +
-				source + '-' + style + ' ' +
-				source + getSize(values[1]) +
-				'" style="' + options.style + ': ' + offset + '%"';
+			return 'class="' + getClasses(values[1], source) + '" style="' + options.style + ': ' + offset + '%"';
 		}
 
 		function addSpread ( offset, values ){
-
-			if ( scope_Spectrum.direction ) {
-				offset = 100 - offset;
-			}
 
 			// Apply the filter function, if it is set.
 			values[1] = (values[1] && filterFunc) ? filterFunc(values[0], values[1]) : values[1];
 
 			// Add a marker for every point
-			element.innerHTML += '<div ' + getTags(offset, 'noUi-marker', values) + '></div>';
+			out += '<div ' + getTags(offset, options.cssClasses.marker, values) + '></div>';
 
 			// Values are only appended for points marked '1' or '2'.
 			if ( values[1] ) {
-				element.innerHTML += '<div '+getTags(offset, 'noUi-value', values)+'>' + formatter.to(values[0]) + '</div>';
+				out += '<div ' + getTags(offset, options.cssClasses.value, values) + '>' + formatter.to(values[0]) + '</div>';
 			}
 		}
 
@@ -1036,6 +1155,8 @@ function closure ( target, options ){
 		Object.keys(spread).forEach(function(a){
 			addSpread(a, spread[a]);
 		});
+
+		element.innerHTML = out;
 
 		return element;
 	}
@@ -1063,48 +1184,12 @@ function closure ( target, options ){
 
 	// Shorthand for base dimensions.
 	function baseSize ( ) {
-		return scope_Base['offset' + ['Width', 'Height'][options.ort]];
+		var rect = scope_Base.getBoundingClientRect(), alt = 'offset' + ['Width', 'Height'][options.ort];
+		return options.ort === 0 ? (rect.width||scope_Base[alt]) : (rect.height||scope_Base[alt]);
 	}
-
-	// External event handling
-	function fireEvent ( event, handleNumber ) {
-
-		if ( handleNumber !== undefined ) {
-			handleNumber = Math.abs(handleNumber - options.dir);
-		}
-
-		Object.keys(scope_Events).forEach(function( targetEvent ) {
-
-			var eventType = targetEvent.split('.')[0];
-
-			if ( event === eventType ) {
-				scope_Events[targetEvent].forEach(function( callback ) {
-					// .reverse is in place
-					// Return values as array, so arg_1[arg_2] is always valid.
-					callback( asArray(valueGet()), handleNumber, inSliderOrder(Array.prototype.slice.call(scope_Values)) );
-				});
-			}
-		});
-	}
-
-	// Returns the input array, respecting the slider direction configuration.
-	function inSliderOrder ( values ) {
-
-		// If only one handle is used, return a single value.
-		if ( values.length === 1 ){
-			return values[0];
-		}
-
-		if ( options.dir ) {
-			return values.reverse();
-		}
-
-		return values;
-	}
-
 
 	// Handler for attaching events trough a proxy.
-	function attach ( events, element, callback, data ) {
+	function attachEvent ( events, element, callback, data ) {
 
 		// This function can be used to 'filter' events to the slider.
 		// element is a node, not a nodeList
@@ -1116,14 +1201,19 @@ function closure ( target, options ){
 			}
 
 			// Stop if an active 'tap' transition is taking place.
-			if ( hasClass(scope_Target, Classes[14]) ) {
+			if ( hasClass(scope_Target, options.cssClasses.tap) ) {
 				return false;
 			}
 
-			e = fixEvent(e);
+			e = fixEvent(e, data.pageOffset);
 
 			// Ignore right or middle clicks on start #454
 			if ( events === actions.start && e.buttons !== undefined && e.buttons > 1 ) {
+				return false;
+			}
+
+			// Ignore right or middle clicks on start #454
+			if ( data.hover && e.buttons ) {
 				return false;
 			}
 
@@ -1131,8 +1221,9 @@ function closure ( target, options ){
 
 			// Call the event handler with the event [ and additional data ].
 			callback ( e, data );
+		};
 
-		}, methods = [];
+		var methods = [];
 
 		// Bind a closure on the target for every event type.
 		events.split(' ').forEach(function( eventName ){
@@ -1143,43 +1234,207 @@ function closure ( target, options ){
 		return methods;
 	}
 
-	// Handle movement on document for handle and range drag.
-	function move ( event, data ) {
+	// Provide a clean event with standardized offset values.
+	function fixEvent ( e, pageOffset ) {
 
-		var handles = data.handles || scope_Handles, positions, state = false,
-			proposal = ((event.calcPoint - data.start) * 100) / baseSize(),
-			handleNumber = handles[0] === scope_Handles[0] ? 0 : 1, i;
+		// Prevent scrolling and panning on touch events, while
+		// attempting to slide. The tap event also depends on this.
+		e.preventDefault();
 
-		// Calculate relative positions for the handles.
-		positions = getPositions( proposal, data.positions, handles.length > 1);
+		// Filter the event to register the type, which can be
+		// touch, mouse or pointer. Offset changes need to be
+		// made on an event specific basis.
+		var touch = e.type.indexOf('touch') === 0,
+			mouse = e.type.indexOf('mouse') === 0,
+			pointer = e.type.indexOf('pointer') === 0,
+			x,y, event = e;
 
-		state = setHandle ( handles[0], positions[handleNumber], handles.length === 1 );
+		// IE10 implemented pointer events with a prefix;
+		if ( e.type.indexOf('MSPointer') === 0 ) {
+			pointer = true;
+		}
 
-		if ( handles.length > 1 ) {
+		if ( touch ) {
 
-			state = setHandle ( handles[1], positions[handleNumber?0:1], false ) || state;
-
-			if ( state ) {
-				// fire for both handles
-				for ( i = 0; i < data.handles.length; i++ ) {
-					fireEvent('slide', i);
-				}
+			// Fix bug when user touches with two or more fingers on mobile devices.
+			// It's useful when you have two or more sliders on one page,
+			// that can be touched simultaneously.
+			// #649, #663, #668
+			if ( event.touches.length > 1 ) {
+				return false;
 			}
-		} else if ( state ) {
-			// Fire for a single handle
-			fireEvent('slide', handleNumber);
+
+			// noUiSlider supports one movement at a time,
+			// so we can select the first 'changedTouch'.
+			x = e.changedTouches[0].pageX;
+			y = e.changedTouches[0].pageY;
+		}
+
+		pageOffset = pageOffset || getPageOffset();
+
+		if ( mouse || pointer ) {
+			x = e.clientX + pageOffset.x;
+			y = e.clientY + pageOffset.y;
+		}
+
+		event.pageOffset = pageOffset;
+		event.points = [x, y];
+		event.cursor = mouse || pointer; // Fix #435
+
+		return event;
+	}
+
+	function calcPointToPercentage ( calcPoint ) {
+		var location = calcPoint - offset(scope_Base, options.ort);
+		var proposal = ( location * 100 ) / baseSize();
+		return options.dir ? 100 - proposal : proposal;
+	}
+
+	function getClosestHandle ( proposal ) {
+
+		var closest = 100;
+		var handleNumber = false;
+
+		scope_Handles.forEach(function(handle, index){
+
+			// Disabled handles are ignored
+			if ( handle.hasAttribute('disabled') ) {
+				return;
+			}
+
+			var pos = Math.abs(scope_Locations[index] - proposal);
+
+			if ( pos < closest ) {
+				handleNumber = index;
+				closest = pos;
+			}
+		});
+
+		return handleNumber;
+	}
+
+	// Moves handle(s) by a percentage
+	// (bool, % to move, [% where handle started, ...], [index in scope_Handles, ...])
+	function moveHandles ( upward, proposal, locations, handleNumbers ) {
+
+		var proposals = locations.slice();
+
+		var b = [!upward, upward];
+		var f = [upward, !upward];
+
+		// Copy handleNumbers so we don't change the dataset
+		handleNumbers = handleNumbers.slice();
+
+		// Check to see which handle is 'leading'.
+		// If that one can't move the second can't either.
+		if ( upward ) {
+			handleNumbers.reverse();
+		}
+
+		// Step 1: get the maximum percentage that any of the handles can move
+		if ( handleNumbers.length > 1 ) {
+
+			handleNumbers.forEach(function(handleNumber, o) {
+
+				var to = checkHandlePosition(proposals, handleNumber, proposals[handleNumber] + proposal, b[o], f[o]);
+
+				// Stop if one of the handles can't move.
+				if ( to === false ) {
+					proposal = 0;
+				} else {
+					proposal = to - proposals[handleNumber];
+					proposals[handleNumber] = to;
+				}
+			});
+		}
+
+		// If using one handle, check backward AND forward
+		else {
+			b = f = [true];
+		}
+
+		var state = false;
+
+		// Step 2: Try to set the handles with the found percentage
+		handleNumbers.forEach(function(handleNumber, o) {
+			state = setHandle(handleNumber, locations[handleNumber] + proposal, b[o], f[o]) || state;
+		});
+
+		// Step 3: If a handle moved, fire events
+		if ( state ) {
+			handleNumbers.forEach(function(handleNumber){
+				fireEvent('update', handleNumber);
+				fireEvent('slide', handleNumber);
+			});
 		}
 	}
 
+	// External event handling
+	function fireEvent ( eventName, handleNumber, tap ) {
+
+		Object.keys(scope_Events).forEach(function( targetEvent ) {
+
+			var eventType = targetEvent.split('.')[0];
+
+			if ( eventName === eventType ) {
+				scope_Events[targetEvent].forEach(function( callback ) {
+
+					callback.call(
+						// Use the slider public API as the scope ('this')
+						scope_Self,
+						// Return values as array, so arg_1[arg_2] is always valid.
+						scope_Values.map(options.format.to),
+						// Handle index, 0 or 1
+						handleNumber,
+						// Unformatted slider values
+						scope_Values.slice(),
+						// Event is fired by tap, true or false
+						tap || false,
+						// Left offset of the handle, in relation to the slider
+						scope_Locations.slice()
+					);
+				});
+			}
+		});
+	}
+
+
+	// Fire 'end' when a mouse or pen leaves the document.
+	function documentLeave ( event, data ) {
+		if ( event.type === "mouseout" && event.target.nodeName === "HTML" && event.relatedTarget === null ){
+			eventEnd (event, data);
+		}
+	}
+
+	// Handle movement on document for handle and range drag.
+	function eventMove ( event, data ) {
+
+		// Fix #498
+		// Check value of .buttons in 'start' to work around a bug in IE10 mobile (data.buttonsProperty).
+		// https://connect.microsoft.com/IE/feedback/details/927005/mobile-ie10-windows-phone-buttons-property-of-pointermove-event-always-zero
+		// IE9 has .buttons and .which zero on mousemove.
+		// Firefox breaks the spec MDN defines.
+		if ( navigator.appVersion.indexOf("MSIE 9") === -1 && event.buttons === 0 && data.buttonsProperty !== 0 ) {
+			return eventEnd(event, data);
+		}
+
+		// Check if we are moving up or down
+		var movement = (options.dir ? -1 : 1) * (event.calcPoint - data.startCalcPoint);
+
+		// Convert the movement into a percentage of the slider width/height
+		var proposal = (movement * 100) / data.baseSize;
+
+		moveHandles(movement > 0, proposal, data.locations, data.handleNumbers);
+	}
+
 	// Unbind move events on document, call callbacks.
-	function end ( event, data ) {
+	function eventEnd ( event, data ) {
 
 		// The handle is no longer active, so remove the class.
-		var active = scope_Base.getElementsByClassName(Classes[15]),
-			handleNumber = data.handles[0] === scope_Handles[0] ? 0 : 1;
+		var active = scope_Base.querySelector( '.' + options.cssClasses.active );
 
-		if ( active.length ) {
-			removeClass(active[0], Classes[15]);
+		if ( active !== null ) {
+			removeClass(active, options.cssClasses.active);
 		}
 
 		// Remove cursor styles and text-selection events bound to the body.
@@ -1188,52 +1443,64 @@ function closure ( target, options ){
 			document.body.removeEventListener('selectstart', document.body.noUiListener);
 		}
 
-		var d = document.documentElement;
-
 		// Unbind the move and end events, which are added on 'start'.
-		d.noUiListeners.forEach(function( c ) {
-			d.removeEventListener(c[0], c[1]);
+		document.documentElement.noUiListeners.forEach(function( c ) {
+			document.documentElement.removeEventListener(c[0], c[1]);
 		});
 
 		// Remove dragging class.
-		removeClass(scope_Target, Classes[12]);
+		removeClass(scope_Target, options.cssClasses.drag);
 
-		// Fire the change and set events.
-		fireEvent('set', handleNumber);
-		fireEvent('change', handleNumber);
+		setZindex();
+
+		data.handleNumbers.forEach(function(handleNumber){
+			fireEvent('set', handleNumber);
+			fireEvent('change', handleNumber);
+			fireEvent('end', handleNumber);
+		});
 	}
 
 	// Bind move events on document.
-	function start ( event, data ) {
-
-		var d = document.documentElement;
+	function eventStart ( event, data ) {
 
 		// Mark the handle as 'active' so it can be styled.
-		if ( data.handles.length === 1 ) {
-			addClass(data.handles[0].children[0], Classes[15]);
+		if ( data.handleNumbers.length === 1 ) {
 
-			// Support 'disabled' handles
-			if ( data.handles[0].hasAttribute('disabled') ) {
+			var handle = scope_Handles[data.handleNumbers[0]];
+
+			// Ignore 'disabled' handles
+			if ( handle.hasAttribute('disabled') ) {
 				return false;
 			}
+
+			addClass(handle.children[0], options.cssClasses.active);
 		}
+
+		// Fix #551, where a handle gets selected instead of dragged.
+		event.preventDefault();
 
 		// A drag should never propagate up to the 'tap' event.
 		event.stopPropagation();
 
 		// Attach the move and end events.
-		var moveEvent = attach(actions.move, d, move, {
-			start: event.calcPoint,
-			handles: data.handles,
-			positions: [
-				scope_Locations[0],
-				scope_Locations[scope_Handles.length - 1]
-			]
-		}), endEvent = attach(actions.end, d, end, {
-			handles: data.handles
+		var moveEvent = attachEvent(actions.move, document.documentElement, eventMove, {
+			startCalcPoint: event.calcPoint,
+			baseSize: baseSize(),
+			pageOffset: event.pageOffset,
+			handleNumbers: data.handleNumbers,
+			buttonsProperty: event.buttons,
+			locations: scope_Locations.slice()
 		});
 
-		d.noUiListeners = moveEvent.concat(endEvent);
+		var endEvent = attachEvent(actions.end, document.documentElement, eventEnd, {
+			handleNumbers: data.handleNumbers
+		});
+
+		var outEvent = attachEvent("mouseout", document.documentElement, documentLeave, {
+			handleNumbers: data.handleNumbers
+		});
+
+		document.documentElement.noUiListeners = moveEvent.concat(endEvent, outEvent);
 
 		// Text selection isn't an issue on touch devices,
 		// so adding cursor styles can be skipped.
@@ -1244,7 +1511,7 @@ function closure ( target, options ){
 
 			// Mark the target with a dragging state.
 			if ( scope_Handles.length > 1 ) {
-				addClass(scope_Target, Classes[12]);
+				addClass(scope_Target, options.cssClasses.drag);
 			}
 
 			var f = function(){
@@ -1256,252 +1523,334 @@ function closure ( target, options ){
 			// Prevent text selection when dragging the handles.
 			document.body.addEventListener('selectstart', f, false);
 		}
+
+		data.handleNumbers.forEach(function(handleNumber){
+			fireEvent('start', handleNumber);
+		});
 	}
 
 	// Move closest handle to tapped location.
-	function tap ( event ) {
+	function eventTap ( event ) {
 
-		var location = event.calcPoint, total = 0, handleNumber, to;
-
-		// The tap event shouldn't propagate up and cause 'edge' to run.
+		// The tap event shouldn't propagate up
 		event.stopPropagation();
 
-		// Add up the handle offsets.
-		scope_Handles.forEach(function(a){
-			total += offset(a)[ options.style ];
-		});
+		var proposal = calcPointToPercentage(event.calcPoint);
+		var handleNumber = getClosestHandle(proposal);
 
-		// Find the handle closest to the tapped position.
-		handleNumber = ( location < total/2 || scope_Handles.length === 1 ) ? 0 : 1;
-
-		location -= offset(scope_Base)[ options.style ];
-
-		// Calculate the new position.
-		to = ( location * 100 ) / baseSize();
-
-		if ( !options.events.snap ) {
-			// Flag the slider as it is now in a transitional state.
-			// Transition takes 300 ms, so re-enable the slider afterwards.
-			addClassFor( scope_Target, Classes[14], 300 );
-		}
-
-		// Support 'disabled' handles
-		if ( scope_Handles[handleNumber].hasAttribute('disabled') ) {
+		// Tackle the case that all handles are 'disabled'.
+		if ( handleNumber === false ) {
 			return false;
 		}
 
-		// Find the closest handle and calculate the tapped point.
-		// The set handle to the new position.
-		setHandle( scope_Handles[handleNumber], to );
+		// Flag the slider as it is now in a transitional state.
+		// Transition takes a configurable amount of ms (default 300). Re-enable the slider after that.
+		if ( !options.events.snap ) {
+			addClassFor(scope_Target, options.cssClasses.tap, options.animationDuration);
+		}
 
-		fireEvent('slide', handleNumber);
-		fireEvent('set', handleNumber);
-		fireEvent('change', handleNumber);
+		setHandle(handleNumber, proposal, true, true);
+
+		setZindex();
+
+		fireEvent('slide', handleNumber, true);
+		fireEvent('set', handleNumber, true);
+		fireEvent('change', handleNumber, true);
+		fireEvent('update', handleNumber, true);
 
 		if ( options.events.snap ) {
-			start(event, { handles: [scope_Handles[total]] });
+			eventStart(event, { handleNumbers: [handleNumber] });
 		}
 	}
 
-	// Attach events to several slider parts.
-	function events ( behaviour ) {
+	// Fires a 'hover' event for a hovered mouse/pen position.
+	function eventHover ( event ) {
 
-		var i, drag;
+		var proposal = calcPointToPercentage(event.calcPoint);
+
+		var to = scope_Spectrum.getStep(proposal);
+		var value = scope_Spectrum.fromStepping(to);
+
+		Object.keys(scope_Events).forEach(function( targetEvent ) {
+			if ( 'hover' === targetEvent.split('.')[0] ) {
+				scope_Events[targetEvent].forEach(function( callback ) {
+					callback.call( scope_Self, value );
+				});
+			}
+		});
+	}
+
+	// Attach events to several slider parts.
+	function bindSliderEvents ( behaviour ) {
 
 		// Attach the standard drag event to the handles.
 		if ( !behaviour.fixed ) {
 
-			for ( i = 0; i < scope_Handles.length; i += 1 ) {
+			scope_Handles.forEach(function( handle, index ){
 
 				// These events are only bound to the visual handle
 				// element, not the 'real' origin element.
-				attach ( actions.start, scope_Handles[i].children[0], start, {
-					handles: [ scope_Handles[i] ]
+				attachEvent ( actions.start, handle.children[0], eventStart, {
+					handleNumbers: [index]
 				});
-			}
+			});
 		}
 
 		// Attach the tap event to the slider base.
 		if ( behaviour.tap ) {
-
-			attach ( actions.start, scope_Base, tap, {
-				handles: scope_Handles
-			});
+			attachEvent (actions.start, scope_Base, eventTap, {});
 		}
 
-		// Make the range dragable.
+		// Fire hover events
+		if ( behaviour.hover ) {
+			attachEvent (actions.move, scope_Base, eventHover, { hover: true });
+		}
+
+		// Make the range draggable.
 		if ( behaviour.drag ){
 
-			drag = [scope_Base.getElementsByClassName( Classes[7] )[0]];
-			addClass(drag[0], Classes[10]);
+			scope_Connects.forEach(function( connect, index ){
 
-			// When the range is fixed, the entire range can
-			// be dragged by the handles. The handle in the first
-			// origin will propagate the start event upward,
-			// but it needs to be bound manually on the other.
-			if ( behaviour.fixed ) {
-				drag.push(scope_Handles[(drag[0] === scope_Handles[0] ? 1 : 0)].children[0]);
-			}
+				if ( connect === false || index === 0 || index === scope_Connects.length - 1 ) {
+					return;
+				}
 
-			drag.forEach(function( element ) {
-				attach ( actions.start, element, start, {
-					handles: scope_Handles
+				var handleBefore = scope_Handles[index - 1];
+				var handleAfter = scope_Handles[index];
+				var eventHolders = [connect];
+
+				addClass(connect, options.cssClasses.draggable);
+
+				// When the range is fixed, the entire range can
+				// be dragged by the handles. The handle in the first
+				// origin will propagate the start event upward,
+				// but it needs to be bound manually on the other.
+				if ( behaviour.fixed ) {
+					eventHolders.push(handleBefore.children[0]);
+					eventHolders.push(handleAfter.children[0]);
+				}
+
+				eventHolders.forEach(function( eventHolder ) {
+					attachEvent ( actions.start, eventHolder, eventStart, {
+						handles: [handleBefore, handleAfter],
+						handleNumbers: [index - 1, index]
+					});
 				});
 			});
 		}
 	}
 
 
-	// Test suggested values and apply margin, step.
-	function setHandle ( handle, to, noLimitOption ) {
+	// Split out the handle positioning logic so the Move event can use it, too
+	function checkHandlePosition ( reference, handleNumber, to, lookBackward, lookForward ) {
 
-		var trigger = handle !== scope_Handles[0] ? 1 : 0,
-			lowerMargin = scope_Locations[0] + options.margin,
-			upperMargin = scope_Locations[1] - options.margin,
-			lowerLimit = scope_Locations[0] + options.limit,
-			upperLimit = scope_Locations[1] - options.limit;
-
-		// For sliders with multiple handles,
-		// limit movement to the other handle.
+		// For sliders with multiple handles, limit movement to the other handle.
 		// Apply the margin option by adding it to the handle positions.
 		if ( scope_Handles.length > 1 ) {
-			to = trigger ? Math.max( to, lowerMargin ) : Math.min( to, upperMargin );
+
+			if ( lookBackward && handleNumber > 0 ) {
+				to = Math.max(to, reference[handleNumber - 1] + options.margin);
+			}
+
+			if ( lookForward && handleNumber < scope_Handles.length - 1 ) {
+				to = Math.min(to, reference[handleNumber + 1] - options.margin);
+			}
 		}
 
 		// The limit option has the opposite effect, limiting handles to a
 		// maximum distance from another. Limit must be > 0, as otherwise
-		// handles would be unmoveable. 'noLimitOption' is set to 'false'
-		// for the .val() method, except for pass 4/4.
-		if ( noLimitOption !== false && options.limit && scope_Handles.length > 1 ) {
-			to = trigger ? Math.min ( to, lowerLimit ) : Math.max( to, upperLimit );
-		}
+		// handles would be unmoveable.
+		if ( scope_Handles.length > 1 && options.limit ) {
 
-		// Handle the step option.
-		to = scope_Spectrum.getStep( to );
+			if ( lookBackward && handleNumber > 0 ) {
+				to = Math.min(to, reference[handleNumber - 1] + options.limit);
+			}
 
-		// Limit to 0/100 for .val input, trim anything beyond 7 digits, as
-		// JavaScript has some issues in its floating point implementation.
-		to = limit(parseFloat(to.toFixed(7)));
-
-		// Return false if handle can't move.
-		if ( to === scope_Locations[trigger] ) {
-			return false;
-		}
-
-		// Set the handle to the new position.
-		handle.style[options.style] = to + '%';
-
-		// Force proper handle stacking
-		if ( !handle.previousSibling ) {
-			removeClass(handle, Classes[17]);
-			if ( to > 50 ) {
-				addClass(handle, Classes[17]);
+			if ( lookForward && handleNumber < scope_Handles.length - 1 ) {
+				to = Math.max(to, reference[handleNumber + 1] - options.limit);
 			}
 		}
 
+		to = scope_Spectrum.getStep(to);
+
+		// Limit percentage to the 0 - 100 range
+		to = limit(to);
+
+		// Return false if handle can't move
+		if ( to === reference[handleNumber] ) {
+			return false;
+		}
+
+		return to;
+	}
+
+	function toPct ( pct ) {
+		return pct + '%';
+	}
+
+	// Updates scope_Locations and scope_Values, updates visual state
+	function updateHandlePosition ( handleNumber, to ) {
+
 		// Update locations.
-		scope_Locations[trigger] = to;
+		scope_Locations[handleNumber] = to;
 
 		// Convert the value to the slider stepping/range.
-		scope_Values[trigger] = scope_Spectrum.fromStepping( to );
+		scope_Values[handleNumber] = scope_Spectrum.fromStepping(to);
 
-		fireEvent('update', trigger);
+		// Called synchronously or on the next animationFrame
+		var stateUpdate = function() {
+			scope_Handles[handleNumber].style[options.style] = toPct(to);
+			updateConnect(handleNumber);
+			updateConnect(handleNumber + 1);
+		};
+
+		// Set the handle to the new position.
+		// Use requestAnimationFrame for efficient painting.
+		// No significant effect in Chrome, Edge sees dramatic performace improvements.
+		// Option to disable is useful for unit tests, and single-step debugging.
+		if ( window.requestAnimationFrame && options.useRequestAnimationFrame ) {
+			window.requestAnimationFrame(stateUpdate);
+		} else {
+			stateUpdate();
+		}
+	}
+
+	function setZindex ( ) {
+
+		scope_HandleNumbers.forEach(function(handleNumber){
+			// Handles before the slider middle are stacked later = higher,
+			// Handles after the middle later is lower
+			// [[7] [8] .......... | .......... [5] [4]
+			var dir = (scope_Locations[handleNumber] > 50 ? -1 : 1);
+			var zIndex = 3 + (scope_Handles.length + (dir * handleNumber));
+			scope_Handles[handleNumber].childNodes[0].style.zIndex = zIndex;
+		});
+	}
+
+	// Test suggested values and apply margin, step.
+	function setHandle ( handleNumber, to, lookBackward, lookForward ) {
+
+		to = checkHandlePosition(scope_Locations, handleNumber, to, lookBackward, lookForward);
+
+		if ( to === false ) {
+			return false;
+		}
+
+		updateHandlePosition(handleNumber, to);
 
 		return true;
 	}
 
-	// Loop values from value method and apply them.
-	function setValues ( count, values ) {
+	// Updates style attribute for connect nodes
+	function updateConnect ( index ) {
 
-		var i, trigger, to;
-
-		// With the limit option, we'll need another limiting pass.
-		if ( options.limit ) {
-			count += 1;
+		// Skip connects set to false
+		if ( !scope_Connects[index] ) {
+			return;
 		}
 
-		// If there are multiple handles to be set run the setting
-		// mechanism twice for the first handle, to make sure it
-		// can be bounced of the second one properly.
-		for ( i = 0; i < count; i += 1 ) {
+		var l = 0;
+		var h = 100;
 
-			trigger = i%2;
+		if ( index !== 0 ) {
+			l = scope_Locations[index - 1];
+		}
 
-			// Get the current argument from the array.
-			to = values[trigger];
+		if ( index !== scope_Connects.length - 1 ) {
+			h = scope_Locations[index];
+		}
 
-			// Setting with null indicates an 'ignore'.
-			// Inputting 'false' is invalid.
-			if ( to !== null && to !== false ) {
+		scope_Connects[index].style[options.style] = toPct(l);
+		scope_Connects[index].style[options.styleOposite] = toPct(100 - h);
+	}
 
-				// If a formatted number was passed, attemt to decode it.
-				if ( typeof to === 'number' ) {
-					to = String(to);
-				}
+	// ...
+	function setValue ( to, handleNumber ) {
 
-				to = options.format.from( to );
+		// Setting with null indicates an 'ignore'.
+		// Inputting 'false' is invalid.
+		if ( to === null || to === false ) {
+			return;
+		}
 
-				// Request an update for all links if the value was invalid.
-				// Do so too if setting the handle fails.
-				if ( to === false || isNaN(to) || setHandle( scope_Handles[trigger], scope_Spectrum.toStepping( to ), i === (3 - options.dir) ) === false ) {
-					fireEvent('update', trigger);
-				}
-			}
+		// If a formatted number was passed, attemt to decode it.
+		if ( typeof to === 'number' ) {
+			to = String(to);
+		}
+
+		to = options.format.from(to);
+
+		// Request an update for all links if the value was invalid.
+		// Do so too if setting the handle fails.
+		if ( to !== false && !isNaN(to) ) {
+			setHandle(handleNumber, scope_Spectrum.toStepping(to), false, false);
 		}
 	}
 
 	// Set the slider value.
-	function valueSet ( input ) {
+	function valueSet ( input, fireSetEvent ) {
 
-		var count, values = asArray( input ), i;
+		var values = asArray(input);
+		var isInit = scope_Locations[0] === undefined;
 
-		// The RTL settings is implemented by reversing the front-end,
-		// internal mechanisms are the same.
-		if ( options.dir && options.handles > 1 ) {
-			values.reverse();
-		}
+		// Event fires by default
+		fireSetEvent = (fireSetEvent === undefined ? true : !!fireSetEvent);
+
+		values.forEach(setValue);
 
 		// Animation is optional.
-		// Make sure the initial values where set before using animated placement.
-		if ( options.animate && scope_Locations[0] !== -1 ) {
-			addClassFor( scope_Target, Classes[14], 300 );
+		// Make sure the initial values were set before using animated placement.
+		if ( options.animate && !isInit ) {
+			addClassFor(scope_Target, options.cssClasses.tap, options.animationDuration);
 		}
 
-		// Determine how often to set the handles.
-		count = scope_Handles.length > 1 ? 3 : 1;
+		// Now that all base values are set, apply constraints
+		scope_HandleNumbers.forEach(function(handleNumber){
+			setHandle(handleNumber, scope_Locations[handleNumber], true, false);
+		});
 
-		if ( values.length === 1 ) {
-			count = 1;
-		}
+		setZindex();
 
-		setValues ( count, values );
+		scope_HandleNumbers.forEach(function(handleNumber){
 
-		// Fire the 'set' event for both handles.
-		for ( i = 0; i < scope_Handles.length; i++ ) {
-			fireEvent('set', i);
-		}
+			fireEvent('update', handleNumber);
+
+			// Fire the event only for handles that received a new value, as per #579
+			if ( values[handleNumber] !== null && fireSetEvent ) {
+				fireEvent('set', handleNumber);
+			}
+		});
+	}
+
+	function valueReset ( fireSetEvent ) {
+		valueSet(options.start, fireSetEvent);
 	}
 
 	// Get the slider value.
 	function valueGet ( ) {
 
-		var i, retour = [];
+		var values = scope_Values.map(options.format.to);
 
-		// Get the value from all handles.
-		for ( i = 0; i < options.handles; i += 1 ){
-			retour[i] = options.format.to( scope_Values[i] );
+		// If only one handle is used, return a single value.
+		if ( values.length === 1 ){
+			return values[0];
 		}
 
-		return inSliderOrder( retour );
+		return values;
 	}
 
 	// Removes classes from the root and empties it.
 	function destroy ( ) {
-		Classes.forEach(function(cls){
-			if ( !cls ) { return; } // Ignore empty classes
-			removeClass(scope_Target, cls);
-		});
-		scope_Target.innerHTML = '';
+
+		for ( var key in options.cssClasses ) {
+			if ( !options.cssClasses.hasOwnProperty(key) ) { continue; }
+			removeClass(scope_Target, options.cssClasses[key]);
+		}
+
+		while (scope_Target.firstChild) {
+			scope_Target.removeChild(scope_Target.firstChild);
+		}
+
 		delete scope_Target.noUiSlider;
 	}
 
@@ -1510,34 +1859,58 @@ function closure ( target, options ){
 
 		// Check all locations, map them to their stepping point.
 		// Get the step point, then find it in the input list.
-		var retour = scope_Locations.map(function( location, index ){
+		return scope_Locations.map(function( location, index ){
 
-			var step = scope_Spectrum.getApplicableStep( location ),
+			var nearbySteps = scope_Spectrum.getNearbySteps( location );
+			var value = scope_Values[index];
+			var increment = nearbySteps.thisStep.step;
+			var decrement = null;
 
-				// As per #391, the comparison for the decrement step can have some rounding issues.
-				// Round the value to the precision used in the step.
-				stepDecimals = countDecimals(String(step[2])),
+			// If the next value in this step moves into the next step,
+			// the increment is the start of the next step - the current value
+			if ( increment !== false ) {
+				if ( value + increment > nearbySteps.stepAfter.startValue ) {
+					increment = nearbySteps.stepAfter.startValue - value;
+				}
+			}
 
-				// Get the current numeric value
-				value = scope_Values[index],
+			// If the value is beyond the starting point
+			if ( value > nearbySteps.thisStep.startValue ) {
+				decrement = nearbySteps.thisStep.step;
+			}
 
-				// To move the slider 'one step up', the current step value needs to be added.
-				// Use null if we are at the maximum slider value.
-				increment = location === 100 ? null : step[2],
+			else if ( nearbySteps.stepBefore.step === false ) {
+				decrement = false;
+			}
 
-				// Going 'one step down' might put the slider in a different sub-range, so we
-				// need to switch between the current or the previous step.
-				prev = Number((value - step[2]).toFixed(stepDecimals)),
+			// If a handle is at the start of a step, it always steps back into the previous step first
+			else {
+				decrement = value - nearbySteps.stepBefore.highestStep;
+			}
 
-				// If the value fits the step, return the current step value. Otherwise, use the
-				// previous step. Return null if the slider is at its minimum value.
-				decrement = location === 0 ? null : (prev >= step[1]) ? step[2] : (step[0] || false);
+			// Now, if at the slider edges, there is not in/decrement
+			if ( location === 100 ) {
+				increment = null;
+			}
+
+			else if ( location === 0 ) {
+				decrement = null;
+			}
+
+			// As per #391, the comparison for the decrement step can have some rounding issues.
+			var stepDecimals = scope_Spectrum.countStepDecimals();
+
+			// Round per #391
+			if ( increment !== null && increment !== false ) {
+				increment = Number(increment.toFixed(stepDecimals));
+			}
+
+			if ( decrement !== null && decrement !== false ) {
+				decrement = Number(decrement.toFixed(stepDecimals));
+			}
 
 			return [decrement, increment];
 		});
-
-		// Return values in the proper order.
-		return inSliderOrder( retour );
 	}
 
 	// Attach an event to this slider, possibly including a namespace
@@ -1556,8 +1929,8 @@ function closure ( target, options ){
 	// Undo attachment of event
 	function removeEvent ( namespacedEvent ) {
 
-		var event = namespacedEvent.split('.')[0],
-			namespace = namespacedEvent.substring(event.length);
+		var event = namespacedEvent && namespacedEvent.split('.')[0],
+			namespace = event && namespacedEvent.substring(event.length);
 
 		Object.keys(scope_Events).forEach(function( bind ){
 
@@ -1570,36 +1943,87 @@ function closure ( target, options ){
 		});
 	}
 
+	// Updateable: margin, limit, step, range, animate, snap
+	function updateOptions ( optionsToUpdate, fireSetEvent ) {
+
+		// Spectrum is created using the range, snap, direction and step options.
+		// 'snap' and 'step' can be updated, 'direction' cannot, due to event binding.
+		// If 'snap' and 'step' are not passed, they should remain unchanged.
+		var v = valueGet();
+
+		var updateAble = ['margin', 'limit', 'range', 'animate', 'snap', 'step', 'format'];
+
+		// Only change options that we're actually passed to update.
+		updateAble.forEach(function(name){
+			if ( optionsToUpdate[name] !== undefined ) {
+				originalOptions[name] = optionsToUpdate[name];
+			}
+		});
+
+		var newOptions = testOptions(originalOptions);
+
+		// Load new options into the slider state
+		updateAble.forEach(function(name){
+			if ( optionsToUpdate[name] !== undefined ) {
+				options[name] = newOptions[name];
+			}
+		});
+
+		// Save current spectrum direction as testOptions in testRange call
+		// doesn't rely on current direction
+		newOptions.spectrum.direction = scope_Spectrum.direction;
+		scope_Spectrum = newOptions.spectrum;
+
+		// Limit and margin depend on the spectrum but are stored outside of it. (#677)
+		options.margin = newOptions.margin;
+		options.limit = newOptions.limit;
+
+		// Invalidate the current positioning so valueSet forces an update.
+		scope_Locations = [];
+		valueSet(optionsToUpdate.start || v, fireSetEvent);
+	}
 
 	// Throw an error if the slider was already initialized.
 	if ( scope_Target.noUiSlider ) {
 		throw new Error('Slider was already initialized.');
 	}
 
-
 	// Create the base element, initialise HTML and set classes.
-	// Add handles and links.
-	scope_Base = addSlider( options.dir, options.ort, scope_Target );
-	scope_Handles = addHandles( options.handles, options.dir, scope_Base );
+	// Add handles and connect elements.
+	addSlider(scope_Target);
+	addElements(options.connect, scope_Base);
 
-	// Set the connect classes.
-	addConnection ( options.connect, scope_Target, scope_Handles );
-
-	// Attach user events.
-	events( options.events );
-
-	if ( options.pips ) {
-		pips(options.pips);
-	}
-
-	return {
+	scope_Self = {
 		destroy: destroy,
 		steps: getCurrentStep,
 		on: bindEvent,
 		off: removeEvent,
 		get: valueGet,
-		set: valueSet
+		set: valueSet,
+		reset: valueReset,
+		 // Exposed for unit testing, don't use this in your application.
+		__moveHandles: function(a, b, c) { moveHandles(a, b, scope_Locations, c); },
+		options: originalOptions, // Issue #600, #678
+		updateOptions: updateOptions,
+		target: scope_Target, // Issue #597
+		pips: pips // Issue #594
 	};
+
+	// Attach user events.
+	bindSliderEvents(options.events);
+
+	// Use the public value method to set the start values.
+	valueSet(options.start);
+
+	if ( options.pips ) {
+		pips(options.pips);
+	}
+
+	if ( options.tooltips ) {
+		tooltips();
+	}
+
+	return scope_Self;
 
 }
 
@@ -1612,13 +2036,12 @@ function closure ( target, options ){
 		}
 
 		// Test the options and create the slider environment;
-		var options = testOptions( originalOptions, target ),
-			slider = closure( target, options );
+		var options = testOptions( originalOptions, target );
+		var api = closure( target, options, originalOptions );
 
-		// Use the public value method to set the start values.
-		slider.set(options.start);
+		target.noUiSlider = api;
 
-		target.noUiSlider = slider;
+		return api;
 	}
 
 	// Use an object instead of a function for future expansibility;
