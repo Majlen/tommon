@@ -6,9 +6,11 @@
 <head>
 <title>TOMMON</title>
 <link rel="stylesheet" type="text/css" href="tommon.css">
+<link rel="stylesheet" type="text/css" href="nouislider.css">
 <script type="text/javascript" src="dygraph-combined.js"></script>
 <script type="text/javascript" src="synchronizer.js"></script>
 <script type="text/javascript" src="tommon.js"></script>
+<script type="text/javascript" src="nouislider.js"></script>
 </head>
 <body>
 
@@ -21,8 +23,23 @@
 </div>
 <div id="wrapper">
 <div id="section">
-
+<div id="dateSelector"></div>
 </div>
 </div>
+<script type="text/javascript">
+var start = Math.floor(Date.now() / 1000)-1;
+var slider = noUiSlider.create(document.getElementById("dateSelector"), {
+	start: [start, start+1],
+	connect: true,
+	range: {'min': start, 'max': start+1},
+	step: 60,
+	pips: {
+		mode: 'steps',
+		stepped: true,
+		density: 1
+	}
+});
+slider.on('change', function(){updateGraphs();});
+</script>
 </body>
 </html>

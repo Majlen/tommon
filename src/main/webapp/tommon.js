@@ -21,13 +21,42 @@ function select_lines(box) {
 	}
 }
 
+function updateRange(date) {
+	if (date < window.start) {
+		window.start = date;
+		window.slider.updateOptions({range: {'min': window.start, 'max': timestamp}});
+		if (graphs.length == 0) {
+			window.slider.set([(timestamp - 7*24*3600), null]);
+		}
+	}
+}
+
 function select_chart(box) {
+	if (timestamp == 0) {
+		timestamp = Math.floor(Date.now() / 1000);
+	}
 	var str = box.getAttribute("data-chart");
 
 	if (box.checked) {
+		var ajaxMinDate = new XMLHttpRequest();
+		if (graphs.length == 0) {
+        	ajaxMinDate.open("GET", "api/" + str + "?first", false);
+        	ajaxMinDate.send();
+        	var date = parseInt(ajaxMinDate.responseText);
+        	updateRange(date);
+        } else {
+        	ajaxMinDate.open("GET", "api/" + str + "?first", true);
+        	ajaxMinDate.onreadystatechange = function() {
+            	if (ajax.readyState == 4 && ajax.status == 200) {
+            		var date = parseInt(ajaxMinDate.responseText);
+					updateRange(date);
+            	}
+            };
+            ajaxMinDate.send();
+        }
+
 		var ajax = new XMLHttpRequest();
 		ajax.open("GET", str, true);
-		ajax.send();
 		ajax.onreadystatechange = function() {
 			if (ajax.readyState == 4 && ajax.status == 200) {
 				var parent = document.getElementById("section");
@@ -35,6 +64,7 @@ function select_chart(box) {
 				registerGraph(str);
 			}
 		};
+		ajax.send();
 	} else {
 		if (sync != null) {
 			sync.detach();
@@ -58,12 +88,10 @@ function select_chart(box) {
 }
 
 function registerGraph(name) {
-	if (timestamp == 0) {
-		timestamp = Math.floor(Date.now() / 1000);
-	}
 	var div = document.getElementById(name + "_chart");
+	var range = window.slider.get();
 
-	g = new Dygraph(div, "api/" + name + "?from=" + (timestamp - 7*24*3600) + "&to=" + timestamp,
+	g = new Dygraph(div, "api/" + name + "?from=" + parseInt(range[0]) + "&to=" + parseInt(range[1]),
 		{
 			includeZero: true,
 			drawGapEdgePoints: true,
@@ -90,5 +118,13 @@ function registerGraph(name) {
 function synchronizeGraphs() {
 	if (graphs.length > 1) {
 		sync = Dygraph.synchronize(graphs, {zoom: true, selection: true, range: false});
+	}
+}
+
+function updateGraphs() {
+	var range = slider.get();
+	for (var i = 0; i < graphs.length; i++) {
+		var file = graphs[i].maindiv_.id.slice(0,graphs[i].maindiv_.id.lastIndexOf("_"));
+		graphs[i].updateOptions({'file': "api/" + file + "?from=" + parseInt(range[0]) + "&to=" + parseInt(range[1])});
 	}
 }
