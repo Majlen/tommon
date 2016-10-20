@@ -1,32 +1,37 @@
 body, html {
-    height:100%;
-    margin:0;
+    height: 100%;
+    margin: 0;
 }
 #nav {
-    background-color:black;
-    color:white;
-    height:100%;
-    padding:0 5mm 0 2mm;
-    float:left;
+    background-color: black;
+    color: white;
+    height: 100%;
+    padding: 0 5mm 0 2mm;
+    float: left;
 }
 #section {
-    overflow:auto;
-    padding:5mm;
+    overflow: auto;
+    padding: 5mm;
 }
 #wrapper {
-    overflow:auto;
-    height:100%;
+    overflow: auto;
+    height: 100%;
+}
+#dateSelectorWrapper {
+    overflow: visible;
+    padding: 5px 0px 60px 0px;
+    margin: 0px 40px 0px 40px;
 }
 .bar {
-   width:100%;
+   width: 100%;
    overflow: auto;
    padding: 5mm 0mm 5mm 0mm;
 }
 .legend {
-   float:left;
+   float: left;
 }
 .boxes {
-   float:right;
+   float: right;
 }
 a:link {
    color: #ffffff;

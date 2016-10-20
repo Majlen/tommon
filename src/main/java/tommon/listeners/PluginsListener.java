@@ -11,6 +11,7 @@ import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.ServletRegistration;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.Properties;
 
 public final class PluginsListener implements ServletContextListener {
@@ -53,6 +54,21 @@ public final class PluginsListener implements ServletContextListener {
             System.out.println(e.getMessage());
         }
         context.setAttribute("plugins", plugins);
+
+        int oldest = Integer.MAX_VALUE;
+        for (PluginConfig plugin: plugins) {
+            int temp = Integer.MAX_VALUE;
+            try {
+                temp = db.getMinimumDate(plugin.getTable());
+            } catch (SQLException e) {
+                System.out.println();
+            }
+            if (temp < oldest) {
+                oldest = temp;
+            }
+        }
+
+        context.setAttribute("oldest", oldest);
     }
 
     private void registerServlet(PluginConfig config) {

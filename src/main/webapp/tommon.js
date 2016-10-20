@@ -21,16 +21,6 @@ function select_lines(box) {
 	}
 }
 
-function updateRange(date) {
-	if (date < window.start) {
-		window.start = date;
-		window.slider.updateOptions({range: {'min': window.start, 'max': timestamp}});
-		if (graphs.length == 0) {
-			window.slider.set([(timestamp - 7*24*3600), null]);
-		}
-	}
-}
-
 function select_chart(box) {
 	if (timestamp == 0) {
 		timestamp = Math.floor(Date.now() / 1000);
@@ -38,23 +28,6 @@ function select_chart(box) {
 	var str = box.getAttribute("data-chart");
 
 	if (box.checked) {
-		var ajaxMinDate = new XMLHttpRequest();
-		if (graphs.length == 0) {
-        	ajaxMinDate.open("GET", "api/" + str + "?first", false);
-        	ajaxMinDate.send();
-        	var date = parseInt(ajaxMinDate.responseText);
-        	updateRange(date);
-        } else {
-        	ajaxMinDate.open("GET", "api/" + str + "?first", true);
-        	ajaxMinDate.onreadystatechange = function() {
-            	if (ajax.readyState == 4 && ajax.status == 200) {
-            		var date = parseInt(ajaxMinDate.responseText);
-					updateRange(date);
-            	}
-            };
-            ajaxMinDate.send();
-        }
-
 		var ajax = new XMLHttpRequest();
 		ajax.open("GET", str, true);
 		ajax.onreadystatechange = function() {
@@ -90,6 +63,8 @@ function select_chart(box) {
 function registerGraph(name) {
 	var div = document.getElementById(name + "_chart");
 	var range = window.slider.get();
+	range[0] = range[0]/1000;
+    range[1] = range[1]/1000;
 
 	g = new Dygraph(div, "api/" + name + "?from=" + parseInt(range[0]) + "&to=" + parseInt(range[1]),
 		{
@@ -122,9 +97,38 @@ function synchronizeGraphs() {
 }
 
 function updateGraphs() {
-	var range = slider.get();
+	var range = window.slider.get();
+	range[0] = range[0]/1000;
+	range[1] = range[1]/1000;
+
 	for (var i = 0; i < graphs.length; i++) {
 		var file = graphs[i].maindiv_.id.slice(0,graphs[i].maindiv_.id.lastIndexOf("_"));
 		graphs[i].updateOptions({'file': "api/" + file + "?from=" + parseInt(range[0]) + "&to=" + parseInt(range[1])});
 	}
+}
+
+function secToDate(seconds) {
+	return new Date(seconds*1000).getTime();
+}
+
+function msecToDate(mseconds) {
+	return new Date(mseconds).getTime();
+}
+
+function getDateTime(msecs) {
+	var d = new Date(msecs);
+	var str = d.getFullYear() + "/";
+	str += zeroPad(d.getMonth()+1, 2) + "/";
+	str += zeroPad(d.getDate(), 2) + "<br>";
+	str += zeroPad(d.getHours(), 2) + ":";
+	str += zeroPad(d.getMinutes(), 2);
+	return str;
+}
+
+function zeroPad(num, size) {
+	var s = num + "";
+	while (s.length < size) {
+	       s = "0" + s;
+	}
+	return s;
 }

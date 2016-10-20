@@ -7,6 +7,7 @@
 <title>TOMMON</title>
 <link rel="stylesheet" type="text/css" href="tommon.css">
 <link rel="stylesheet" type="text/css" href="nouislider.css">
+<link rel="stylesheet" type="text/css" href="nouislider.pips.css">
 <script type="text/javascript" src="dygraph-combined.js"></script>
 <script type="text/javascript" src="synchronizer.js"></script>
 <script type="text/javascript" src="tommon.js"></script>
@@ -23,20 +24,31 @@
 </div>
 <div id="wrapper">
 <div id="section">
+<div id="dateSelectorWrapper">
 <div id="dateSelector"></div>
 </div>
 </div>
+</div>
 <script type="text/javascript">
-var start = Math.floor(Date.now() / 1000)-1;
+var end = Math.floor(Date.now());
 var slider = noUiSlider.create(document.getElementById("dateSelector"), {
-	start: [start, start+1],
+	start: [msecToDate(end - 7 * 24 * 3600 * 1000), msecToDate(end)],
 	connect: true,
-	range: {'min': start, 'max': start+1},
-	step: 60,
+	range: {'min': secToDate(${oldest}), 'max': msecToDate(end)},
+	step: 60000,
 	pips: {
-		mode: 'steps',
+		mode: 'positions',
 		stepped: true,
-		density: 1
+		density: 2,
+		values: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+		format: {
+			to: function(value) {
+				return getDateTime(value);
+			},
+			from: function(value) {
+				return getDateTime(value);
+			}
+		}
 	}
 });
 slider.on('change', function(){updateGraphs();});
