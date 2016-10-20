@@ -5,6 +5,7 @@
 <jsp:useBean id="date" class="java.util.Date" />
 
 <div id="${reqName}_bar" class="bar">
+<h2>${reqName}</h2>
 <div id="${reqName}_legend" class="legend" align="left">
 </div>
 <div id="${reqName}_boxes" class="boxes" align="right">
