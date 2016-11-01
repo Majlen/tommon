@@ -6,6 +6,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
+/**
+ * Index. Just forwards the request to pageTemplate.jsp.
+ */
 public class IndexServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 

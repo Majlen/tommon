@@ -8,6 +8,10 @@ import javax.servlet.ServletContextListener;
 import java.sql.Connection;
 import java.util.Properties;
 
+/**
+ * ServletContextListener opening and closing the connection to Database.
+ * @author Milan Ševčík
+ */
 public final class DBListener implements ServletContextListener {
 	private ServletContext context = null;
 	private DBManager db;

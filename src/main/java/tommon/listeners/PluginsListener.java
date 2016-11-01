@@ -14,6 +14,10 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Properties;
 
+/**
+ * ServletContextListener loading all the plugins from specified directory.
+ * @author Milan Ševčík
+ */
 public final class PluginsListener implements ServletContextListener {
 	private ServletContext context = null;
 
@@ -24,10 +28,10 @@ public final class PluginsListener implements ServletContextListener {
 		for (PluginConfig plugin : plugins) {
 			plugin.getTimer().cancel();
 
-			// Lets the timers cancel hopefully. Link below hasn't provided better solution.
-			// https://mail-archives.apache.org/mod_mbox/tomcat-users/201107.mbox/%3C4E2CB8BC.6050202@tmbsw.com%3E
-			Thread.yield();
-		}
+            // Hopefully, lets the timers cancel. Link below hasn't provided better solution.
+            // https://mail-archives.apache.org/mod_mbox/tomcat-users/201107.mbox/%3C4E2CB8BC.6050202@tmbsw.com%3E
+            Thread.yield();
+        }
 
 		plugins = null;
 		context = null;

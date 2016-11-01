@@ -4,20 +4,36 @@ import java.io.PrintWriter;
 import java.sql.*;
 import java.text.SimpleDateFormat;
 
+/**
+ * Implementation of StorageManager, which stores all the values in database.
+ * @author Milan Ševčík
+ */
 public final class DBManager implements StorageManager {
 	private Connection sqlcon = null;
 	private Driver driver;
 
-	public DBManager(String dburl, String driver) throws ClassNotFoundException, SQLException {
-		Class.forName(driver);
-		sqlcon = DriverManager.getConnection(dburl);
-		this.driver = DriverManager.getDriver(dburl);
-	}
+    /**
+     * Constructor, connecting to the database.
+     *
+     * @param dburl JDBC URL of the database
+     * @param driver name of the JDBC driver
+     * @throws ClassNotFoundException thrown when the requested JDBC driver could not be found
+     * @throws SQLException thrown when the driver cannot connect to database
+     */
+    public DBManager(String dburl, String driver) throws ClassNotFoundException, SQLException {
+        Class.forName(driver);
+        sqlcon = DriverManager.getConnection(dburl);
+        this.driver = DriverManager.getDriver(dburl);
+    }
 
-	public void close() throws SQLException {
-		sqlcon.close();
-		DriverManager.deregisterDriver(driver);
-	}
+    /**
+     * Closes database connection.
+     * @throws SQLException
+     */
+    public void close() throws SQLException {
+        sqlcon.close();
+        DriverManager.deregisterDriver(driver);
+    }
 
 	protected void finalize() throws Throwable {
 		try {
@@ -28,15 +44,28 @@ public final class DBManager implements StorageManager {
 		}
 	}
 
+    /**
+     * Adds table to the database
+     * @param table name of the table
+     * @param columns names of columns
+     * @throws SQLException thrown when there is a syntax error in SQL
+     */
 	public void addTable(String table, String[] columns) throws SQLException {
 		String cols = deArray(columns);
 		Statement s = sqlcon.createStatement();
 		s.executeUpdate("CREATE TABLE IF NOT EXISTS " + table + " (date INTEGER" + cols + ")");
 	}
 
-	public void addRow(String table, String[] columns, String[] values) throws SQLException {
-		String colsconv = deArray(columns);
-		String valsconv = deArray(values);
+    /**
+     * Adds row of values to the database
+     * @param table name of the table
+     * @param columns name of columns
+     * @param values values to be stored
+     * @throws SQLException thrown when there is a syntax error in SQL
+     */
+    public void addRow(String table, String[] columns, String[] values) throws SQLException {
+        String colsconv = deArray(columns);
+        String valsconv = deArray(values);
 
 		String cols = "(date" + colsconv + ")";
 		String vals = "(" + System.currentTimeMillis() / 1000 + valsconv + ")";
@@ -46,9 +75,18 @@ public final class DBManager implements StorageManager {
 
 	}
 
-	public void printTableCSV(String table, String[] columns, int from, int to, PrintWriter print) throws SQLException {
-		SimpleDateFormat df = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-		String cols = deArray(columns);
+    /**
+     * Prints the table ins CSV format by provided PrintWriter
+     * @param table name of the table
+     * @param columns name of columns
+     * @param from date to begin with as seconds timestamp
+     * @param to date to end with as seconds timestamp
+     * @param print PrintWriter to print the table with
+     * @throws SQLException thrown when there is a syntax error in SQL
+     */
+    public void printTableCSV(String table, String[] columns, int from, int to, PrintWriter print) throws SQLException {
+        SimpleDateFormat df = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+        String cols = deArray(columns);
 
 		Statement s = sqlcon.createStatement();
 		ResultSet rs = s.executeQuery("SELECT date" + cols + " FROM " + table + " WHERE date BETWEEN " + from + " AND " + to + ";");
@@ -69,6 +107,12 @@ public final class DBManager implements StorageManager {
 		}
 	}
 
+    /**
+     * Gets the oldest date in table
+     * @param table name of the table
+     * @return the oldest date in table
+     * @throws SQLException thrown when there is a syntax error in SQL
+     */
 	public int getMinimumDate(String table) throws SQLException {
 		Statement s = sqlcon.createStatement();
 		ResultSet rs = s.executeQuery("SELECT date FROM " + table + " ORDER BY ROWID ASC LIMIT 1;");

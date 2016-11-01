@@ -4,6 +4,9 @@ import tommon.plugins.PluginConfig;
 
 import javax.servlet.http.HttpServlet;
 
+/**
+ * HttpServlet extension with PluginConfig, so extending servlets can access it.
+ */
 public abstract class PluginServlet extends HttpServlet {
 	PluginConfig config;
 
