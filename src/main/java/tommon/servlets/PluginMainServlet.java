@@ -7,6 +7,7 @@ import java.io.IOException;
 
 /**
  * Main servlet of plugins. Sends the JSP template with URL of API and value names.
+ * @author Milan Ševčík
  */
 public class PluginMainServlet extends PluginServlet {
 	private static final long serialVersionUID = 1L;

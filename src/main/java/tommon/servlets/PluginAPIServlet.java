@@ -11,6 +11,7 @@ import java.sql.SQLException;
 
 /**
  * API servlet of plugins. Sends requested columns from a requested time period in form of CSV table.
+ * @author Milan Ševčík
  */
 public class PluginAPIServlet extends PluginServlet {
 	private static final long serialVersionUID = 1L;
