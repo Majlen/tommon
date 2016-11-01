@@ -7,9 +7,9 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 public class IndexServlet extends HttpServlet {
-    private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 1L;
 
-    public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
-        getServletContext().getNamedDispatcher("pageTemplate").forward(request, response);
-    }
+	public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
+		getServletContext().getNamedDispatcher("pageTemplate").forward(request, response);
+	}
 }
