@@ -8,6 +8,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.SQLException;
+import java.time.Instant;
 
 /**
  * API servlet of plugins. Sends requested columns from a requested time period in form of CSV table.
@@ -25,11 +26,11 @@ public class PluginAPIServlet extends PluginServlet {
 			try {
 				response.getWriter().print(db.getMinimumDate(config.getTable()));
 			} catch (SQLException e) {
-				response.getWriter().print(System.currentTimeMillis() / 1000);
+				response.getWriter().print(Instant.now().toEpochMilli());
 			}
 		} else {
-			int from = Integer.parseInt(request.getParameter("from"));
-			int to = Integer.parseInt(request.getParameter("to"));
+			Instant from = Instant.ofEpochMilli(Long.parseLong(request.getParameter("from")));
+			Instant to = Instant.ofEpochMilli(Long.parseLong(request.getParameter("to")));
 
 			response.setContentType("text/csv");
 

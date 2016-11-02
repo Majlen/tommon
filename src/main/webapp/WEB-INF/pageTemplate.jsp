@@ -34,7 +34,7 @@ var end = Math.floor(Date.now());
 var slider = noUiSlider.create(document.getElementById("dateSelector"), {
 	start: [msecToDate(end - 7 * 24 * 3600 * 1000), msecToDate(end)],
 	connect: true,
-	range: {'min': secToDate(${oldest}), 'max': msecToDate(end)},
+	range: {'min': msecToDate(${oldest}), 'max': msecToDate(end)},
 	step: 60000,
 	pips: {
 		mode: 'positions',

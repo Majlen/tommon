@@ -2,13 +2,18 @@ package tommon.managers;
 
 import java.io.PrintWriter;
 import java.sql.*;
-import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 /**
  * Implementation of StorageManager, which stores all the values in database.
  * @author Milan Ševčík
  */
 public final class DBManager implements StorageManager {
+	final private int schema_version = 2;
 	private Connection sqlcon = null;
 	private Driver driver;
 
@@ -24,16 +29,49 @@ public final class DBManager implements StorageManager {
         Class.forName(driver);
         sqlcon = DriverManager.getConnection(dburl);
         this.driver = DriverManager.getDriver(dburl);
+		update();
     }
 
     /**
      * Closes database connection.
-     * @throws SQLException
+     * @throws SQLException thrown when there are issues closing the connection
      */
     public void close() throws SQLException {
         sqlcon.close();
         DriverManager.deregisterDriver(driver);
     }
+
+	private void update() throws SQLException {
+		ResultSet rs = sqlcon.createStatement().executeQuery("PRAGMA user_version");
+		//TODO: in the future should check for the actual version
+		if (rs.getInt("user_version") < schema_version) {
+			rs.close();
+
+			rs = sqlcon.createStatement().executeQuery("SELECT name FROM sqlite_master WHERE type='table'");
+			List<String> tables = new LinkedList<>();
+			while (rs.next()) {
+				tables.add(rs.getString("name"));
+			}
+			rs.close();
+
+			sqlcon.setAutoCommit(false);
+			PreparedStatement s = sqlcon.prepareStatement("UPDATE ? SET date = date * 1000");
+			for (String table: tables) {
+				s.setString(1, table);
+				s.executeUpdate();
+			}
+			PreparedStatement version = sqlcon.prepareStatement("PRAGMA user_version = ?");
+			version.setInt(1, schema_version);
+			version.executeUpdate();
+
+			sqlcon.commit();
+			sqlcon.setAutoCommit(true);
+			s.close();
+			version.close();
+		} else {
+			rs.close();
+		}
+	}
 
 	protected void finalize() throws Throwable {
 		try {
@@ -52,8 +90,10 @@ public final class DBManager implements StorageManager {
      */
 	public void addTable(String table, String[] columns) throws SQLException {
 		String cols = deArray(columns);
-		Statement s = sqlcon.createStatement();
-		s.executeUpdate("CREATE TABLE IF NOT EXISTS " + table + " (date INTEGER" + cols + ")");
+		PreparedStatement s = sqlcon.prepareStatement("CREATE TABLE IF NOT EXISTS ? (date INTEGER" + cols + ")");
+		s.setString(1, table);
+		s.executeUpdate();
+		s.close();
 	}
 
     /**
@@ -68,11 +108,12 @@ public final class DBManager implements StorageManager {
         String valsconv = deArray(values);
 
 		String cols = "(date" + colsconv + ")";
-		String vals = "(" + System.currentTimeMillis() / 1000 + valsconv + ")";
+		String vals = "(" + Instant.now().toEpochMilli() + valsconv + ")";
 
-		Statement s = sqlcon.createStatement();
-		s.executeUpdate("INSERT INTO " + table + " " + cols + " VALUES " + vals + ";");
-
+		PreparedStatement s = sqlcon.prepareStatement("INSERT INTO ? " + cols + " VALUES " + vals + ";");
+		s.setString(1, table);
+		s.executeUpdate();
+		s.close();
 	}
 
     /**
@@ -84,17 +125,21 @@ public final class DBManager implements StorageManager {
      * @param print PrintWriter to print the table with
      * @throws SQLException thrown when there is a syntax error in SQL
      */
-    public void printTableCSV(String table, String[] columns, int from, int to, PrintWriter print) throws SQLException {
-        SimpleDateFormat df = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-        String cols = deArray(columns);
+    public void printTableCSV(String table, String[] columns, Instant from, Instant to, PrintWriter print) throws SQLException {
+		DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss", Locale.getDefault()).withZone(ZoneId.systemDefault());
+		String cols = deArray(columns);
 
-		Statement s = sqlcon.createStatement();
-		ResultSet rs = s.executeQuery("SELECT date" + cols + " FROM " + table + " WHERE date BETWEEN " + from + " AND " + to + ";");
+		PreparedStatement s = sqlcon.prepareStatement("SELECT date" + cols + " FROM ? WHERE date BETWEEN ? AND ?;");
+		s.setString(1, table);
+		s.setTimestamp(2, Timestamp.from(from));
+		s.setTimestamp(3, Timestamp.from(to));
+		ResultSet rs = s.executeQuery();
 
 		print.println("date" + cols);
 
 		while (rs.next()) {
-			print.print(df.format(new java.util.Date(rs.getInt("date") * 1000L)) + ",");
+			LocalDateTime date = rs.getTimestamp("date").toLocalDateTime();
+			print.print(date.format(dtf) + ",");
 
 			for (int i = 0; i < columns.length; i++) {
 				print.print(rs.getString(columns[i]));
@@ -105,6 +150,8 @@ public final class DBManager implements StorageManager {
 				}
 			}
 		}
+		rs.close();
+		rs.close();
 	}
 
     /**
@@ -114,9 +161,14 @@ public final class DBManager implements StorageManager {
      * @throws SQLException thrown when there is a syntax error in SQL
      */
 	public int getMinimumDate(String table) throws SQLException {
-		Statement s = sqlcon.createStatement();
-		ResultSet rs = s.executeQuery("SELECT date FROM " + table + " ORDER BY ROWID ASC LIMIT 1;");
-		return rs.getInt("date");
+		PreparedStatement s = sqlcon.prepareStatement("SELECT date FROM ? ORDER BY ROWID ASC LIMIT 1;");
+		s.setString(1, table);
+		ResultSet rs = s.executeQuery();
+		int out = rs.getInt("date");
+
+		rs.close();
+		s.close();
+		return out;
 	}
 
 	private static String deArray(String[] arr) {

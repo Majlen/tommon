@@ -23,7 +23,7 @@ function select_lines(box) {
 
 function select_chart(box) {
 	if (timestamp == 0) {
-		timestamp = Math.floor(Date.now() / 1000);
+		timestamp = Date.now();
 	}
 	var str = box.getAttribute("data-chart");
 
@@ -63,8 +63,6 @@ function select_chart(box) {
 function registerGraph(name) {
 	var div = document.getElementById(name + "_chart");
 	var range = window.slider.get();
-	range[0] = range[0]/1000;
-    range[1] = range[1]/1000;
 
 	g = new Dygraph(div, "api/" + name + "?from=" + parseInt(range[0]) + "&to=" + parseInt(range[1]),
 		{
@@ -98,17 +96,11 @@ function synchronizeGraphs() {
 
 function updateGraphs() {
 	var range = window.slider.get();
-	range[0] = range[0]/1000;
-	range[1] = range[1]/1000;
 
 	for (var i = 0; i < graphs.length; i++) {
 		var file = graphs[i].maindiv_.id.slice(0,graphs[i].maindiv_.id.lastIndexOf("_"));
 		graphs[i].updateOptions({'file': "api/" + file + "?from=" + parseInt(range[0]) + "&to=" + parseInt(range[1])});
 	}
-}
-
-function secToDate(seconds) {
-	return new Date(seconds*1000).getTime();
 }
 
 function msecToDate(mseconds) {
