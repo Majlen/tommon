@@ -17,29 +17,29 @@ public final class DBManager implements StorageManager {
 	private Connection sqlcon = null;
 	private Driver driver;
 
-    /**
-     * Constructor, connecting to the database.
-     *
-     * @param dburl JDBC URL of the database
-     * @param driver name of the JDBC driver
-     * @throws ClassNotFoundException thrown when the requested JDBC driver could not be found
-     * @throws SQLException thrown when the driver cannot connect to database
-     */
-    public DBManager(String dburl, String driver) throws ClassNotFoundException, SQLException {
-        Class.forName(driver);
-        sqlcon = DriverManager.getConnection(dburl);
-        this.driver = DriverManager.getDriver(dburl);
+	/**
+	 * Constructor, connecting to the database.
+	 *
+	 * @param dburl JDBC URL of the database
+	 * @param driver name of the JDBC driver
+	 * @throws ClassNotFoundException thrown when the requested JDBC driver could not be found
+	 * @throws SQLException thrown when the driver cannot connect to database
+	 */
+	public DBManager(String dburl, String driver) throws ClassNotFoundException, SQLException {
+		Class.forName(driver);
+		sqlcon = DriverManager.getConnection(dburl);
+		this.driver = DriverManager.getDriver(dburl);
 		update();
-    }
+	}
 
-    /**
-     * Closes database connection.
-     * @throws SQLException thrown when there are issues closing the connection
-     */
-    public void close() throws SQLException {
-        sqlcon.close();
-        DriverManager.deregisterDriver(driver);
-    }
+	/**
+	 * Closes database connection.
+	 * @throws SQLException thrown when there are issues closing the connection
+	 */
+	public void close() throws SQLException {
+		sqlcon.close();
+		DriverManager.deregisterDriver(driver);
+	}
 
 	private void update() throws SQLException {
 		ResultSet rs = sqlcon.createStatement().executeQuery("PRAGMA user_version");
@@ -82,12 +82,12 @@ public final class DBManager implements StorageManager {
 		}
 	}
 
-    /**
-     * Adds table to the database
-     * @param table name of the table
-     * @param columns names of columns
-     * @throws SQLException thrown when there is a syntax error in SQL
-     */
+	/**
+	 * Adds table to the database
+	 * @param table name of the table
+	 * @param columns names of columns
+	 * @throws SQLException thrown when there is a syntax error in SQL
+	 */
 	public void addTable(String table, String[] columns) throws SQLException {
 		String cols = deArray(columns);
 		PreparedStatement s = sqlcon.prepareStatement("CREATE TABLE IF NOT EXISTS ? (date INTEGER" + cols + ")");
@@ -96,16 +96,16 @@ public final class DBManager implements StorageManager {
 		s.close();
 	}
 
-    /**
-     * Adds row of values to the database
-     * @param table name of the table
-     * @param columns name of columns
-     * @param values values to be stored
-     * @throws SQLException thrown when there is a syntax error in SQL
-     */
-    public void addRow(String table, String[] columns, String[] values) throws SQLException {
-        String colsconv = deArray(columns);
-        String valsconv = deArray(values);
+	/**
+	 * Adds row of values to the database
+	 * @param table name of the table
+	 * @param columns name of columns
+	 * @param values values to be stored
+	 * @throws SQLException thrown when there is a syntax error in SQL
+	 */
+	public void addRow(String table, String[] columns, String[] values) throws SQLException {
+		String colsconv = deArray(columns);
+		String valsconv = deArray(values);
 
 		String cols = "(date" + colsconv + ")";
 		String vals = "(" + Instant.now().toEpochMilli() + valsconv + ")";
@@ -116,16 +116,16 @@ public final class DBManager implements StorageManager {
 		s.close();
 	}
 
-    /**
-     * Prints the table ins CSV format by provided PrintWriter
-     * @param table name of the table
-     * @param columns name of columns
-     * @param from date to begin with as seconds timestamp
-     * @param to date to end with as seconds timestamp
-     * @param print PrintWriter to print the table with
-     * @throws SQLException thrown when there is a syntax error in SQL
-     */
-    public void printTableCSV(String table, String[] columns, Instant from, Instant to, PrintWriter print) throws SQLException {
+	/**
+	 * Prints the table ins CSV format by provided PrintWriter
+	 * @param table name of the table
+	 * @param columns name of columns
+	 * @param from date to begin with as seconds timestamp
+	 * @param to date to end with as seconds timestamp
+	 * @param print PrintWriter to print the table with
+	 * @throws SQLException thrown when there is a syntax error in SQL
+	 */
+	public void printTableCSV(String table, String[] columns, Instant from, Instant to, PrintWriter print) throws SQLException {
 		DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss", Locale.getDefault()).withZone(ZoneId.systemDefault());
 		String cols = deArray(columns);
 
@@ -154,12 +154,12 @@ public final class DBManager implements StorageManager {
 		rs.close();
 	}
 
-    /**
-     * Gets the oldest date in table
-     * @param table name of the table
-     * @return the oldest date in table
-     * @throws SQLException thrown when there is a syntax error in SQL
-     */
+	/**
+	 * Gets the oldest date in table
+	 * @param table name of the table
+	 * @return the oldest date in table
+	 * @throws SQLException thrown when there is a syntax error in SQL
+	 */
 	public int getMinimumDate(String table) throws SQLException {
 		PreparedStatement s = sqlcon.prepareStatement("SELECT date FROM ? ORDER BY ROWID ASC LIMIT 1;");
 		s.setString(1, table);
