@@ -178,4 +178,43 @@ public final class DBManager implements StorageManager {
 		}
 		return out;
 	}
+
+	public Map<Instant, String> getColumn(String table, String column, Instant from, Instant to) throws SQLException {
+		PreparedStatement s = sqlcon.prepareStatement("SELECT date, ? FROM ? WHERE date BETWEEN ? AND ?;");
+		s.setString(1, column);
+		s.setString(2, table);
+		s.setTimestamp(3, Timestamp.from(from));
+		s.setTimestamp(4, Timestamp.from(to));
+		ResultSet rs = s.executeQuery();
+
+		Map<Instant, String> out = new HashMap<>();
+		while (rs.next()) {
+			out.put(rs.getTimestamp("date").toInstant(), rs.getString(column));
+		}
+		rs.close();
+		s.close();
+		return out;
+	}
+
+	public Map<Instant, Map<String, String>> getColumns(String table, String[] columns, Instant from, Instant to) throws SQLException {
+		String cols = deArray(columns);
+
+		PreparedStatement s = sqlcon.prepareStatement("SELECT date" + cols + " FROM ? WHERE date BETWEEN ? AND ?;");
+		s.setString(1, table);
+		s.setTimestamp(2, Timestamp.from(from));
+		s.setTimestamp(3, Timestamp.from(to));
+		ResultSet rs = s.executeQuery();
+
+		Map<Instant, Map<String, String>> out = new HashMap<>();
+		while (rs.next()) {
+			Map<String, String> outCols = new HashMap<>();
+			for (String column: columns) {
+				outCols.put(column, rs.getString(column));
+			}
+			out.put(rs.getTimestamp("date").toInstant(), outCols);
+		}
+		rs.close();
+		s.close();
+		return out;
+	}
 }
