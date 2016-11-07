@@ -15,4 +15,4 @@
 </div>
 </div>
 
-<div id="${reqName}_chart" class="graph" onresize="resize(g_${reqName}_chart)">
+<div id="${reqName}_chart" class="graph" onresize="resize(g_${reqName}_chart)" />
