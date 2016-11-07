@@ -2,6 +2,8 @@ package tommon.servlets;
 
 import tommon.managers.DBManager;
 
+import javax.json.Json;
+import javax.json.JsonWriter;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -16,11 +18,13 @@ import java.time.Instant;
  */
 public class PluginAPIServlet extends PluginServlet {
 	private static final long serialVersionUID = 1L;
+	private Instant from;
+	private Instant to;
+	private DBManager db;
 
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
-		DBManager db = (DBManager) getServletContext().getAttribute("db");
+		db = (DBManager) getServletContext().getAttribute("db");
 		String first = request.getParameter("first");
-		PrintWriter out = response.getWriter();
 
 		if (first != null) {
 			try {
@@ -29,20 +33,44 @@ public class PluginAPIServlet extends PluginServlet {
 				response.getWriter().print(Instant.now().toEpochMilli());
 			}
 		} else {
-			Instant from = Instant.ofEpochMilli(Long.parseLong(request.getParameter("from")));
-			Instant to = Instant.ofEpochMilli(Long.parseLong(request.getParameter("to")));
+			PrintWriter out = response.getWriter();
+			from = Instant.ofEpochMilli(Long.parseLong(request.getParameter("from")));
+			to = Instant.ofEpochMilli(Long.parseLong(request.getParameter("to")));
+			String type = request.getParameter("mimetype");
 
-			response.setContentType("text/csv");
-
-			try {
-				db.printTableCSV(config.getTable(), config.getFields(), from, to, out);
-			} catch (Exception e) {
-				System.out.println("ERROR: Could not access data in DB");
-				System.out.println(e.getMessage());
-				return;
+			switch (type) {
+				case "csv":
+					response.setContentType("text/csv");
+					printCSV(out);
+					break;
+				case "json":
+					response.setContentType("application/json");
+					printJSON(out);
+					break;
 			}
+			out.flush();
 		}
-
-		out.flush();
 	}
+
+	private void printCSV(PrintWriter writer) {
+		try {
+			db.printTableCSV(config.getTable(), config.getFields(), from, to, writer);
+		} catch (SQLException e) {
+			System.out.println("ERROR: Could not access data in DB");
+			System.out.println(e.getMessage());
+		}
+	}
+
+	private void printJSON(PrintWriter writer) {
+		try {
+			JsonWriter jsonWriter = Json.createWriter(writer);
+			jsonWriter.writeObject(db.getJsonFromColumns(config.getTable(), config.getFields(), from, to));
+			jsonWriter.close();
+		} catch (SQLException e) {
+			System.out.println("ERROR: Could not access data in DB");
+			System.out.println(e.getMessage());
+			writer.print("{}");
+		}
+	}
+
 }

@@ -1,5 +1,9 @@
 package tommon.managers;
 
+import javax.json.Json;
+import javax.json.JsonArrayBuilder;
+import javax.json.JsonObject;
+import javax.json.JsonObjectBuilder;
 import java.io.PrintWriter;
 import java.sql.*;
 import java.time.Instant;
@@ -216,5 +220,34 @@ public final class DBManager implements StorageManager {
 		rs.close();
 		s.close();
 		return out;
+	}
+
+	public JsonObject getJsonFromColumns(String table, String[] columns, Instant from, Instant to) throws SQLException {
+		Map<Instant, Map<String, String>> map = getColumns(table, columns, from, to);
+		JsonObjectBuilder builder = Json.createObjectBuilder();
+		JsonArrayBuilder outer = Json.createArrayBuilder();
+
+		for (Instant i: map.keySet()) {
+			JsonArrayBuilder array = Json.createArrayBuilder();
+
+			array.add(i.toEpochMilli());
+			for (String column: map.get(i).keySet()) {
+				array.add(map.get(i).get(column));
+			}
+
+			outer.add(array);
+		}
+
+		Map.Entry<Instant, Map<String, String>> entry = map.entrySet().iterator().next();
+		JsonArrayBuilder headers = Json.createArrayBuilder();
+
+		headers.add("date");
+		for (String column: entry.getValue().keySet()) {
+			headers.add(column);
+		}
+
+		builder.add("values", outer);
+		builder.add("headers", headers);
+		return builder.build();
 	}
 }
