@@ -64,8 +64,9 @@ function registerGraph(name) {
 	var div = document.getElementById(name + "_chart");
 	var range = window.slider.get();
 
-	g = new Dygraph(div, "api/" + name + "?from=" + parseInt(range[0]) + "&to=" + parseInt(range[1]),
+	g = new Dygraph(div, [[]],
 		{
+			labels: [""],
 			includeZero: true,
 			drawGapEdgePoints: true,
 			stackedGraph: false,
@@ -94,12 +95,22 @@ function synchronizeGraphs() {
 	}
 }
 
-function updateGraphs() {
-	var range = window.slider.get();
+function updateGraph(graph, url) {
+	var ajax = new XMLHttpRequest();
+	ajax.open("GET", url, true);
+	ajax.onreadystatechange = function() {
+		if (ajax.readyState == 4 && ajax.status == 200) {
+			var json = JSON.parse(ajax.responseText);
+			graphs[i].updateOptions({'file': json.values, 'labels': json.headers});
+		}
+	};
+	ajax.send();
+}
 
+function updateGraphs() {
 	for (var i = 0; i < graphs.length; i++) {
-		var file = graphs[i].maindiv_.id.slice(0,graphs[i].maindiv_.id.lastIndexOf("_"));
-		graphs[i].updateOptions({'file': "api/" + file + "?from=" + parseInt(range[0]) + "&to=" + parseInt(range[1])});
+		var plugin = graphs[i].maindiv_.id.slice(0,graphs[i].maindiv_.id.lastIndexOf("_"));
+		updateGraph(graphs[i], getUrl(plugin));
 	}
 }
 
@@ -115,6 +126,11 @@ function getDateTime(msecs) {
 	str += zeroPad(d.getHours(), 2) + ":";
 	str += zeroPad(d.getMinutes(), 2);
 	return str;
+}
+
+function getUrl(name) {
+	var range = window.slider.get();
+	return "api/" + name + "?from=" + parseInt(range[0]) + "&to=" + parseInt(range[1]);
 }
 
 function zeroPad(num, size) {

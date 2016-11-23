@@ -44,6 +44,7 @@ public class PluginAPIServlet extends PluginServlet {
 					printCSV(out);
 					break;
 				case "json":
+				default:
 					response.setContentType("application/json");
 					printJSON(out);
 					break;
