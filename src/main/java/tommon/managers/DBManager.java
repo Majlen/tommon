@@ -64,9 +64,10 @@ public final class DBManager implements StorageManager {
 				s.setString(1, table);
 				s.executeUpdate();
 			}
-			PreparedStatement version = sqlcon.prepareStatement("PRAGMA user_version = ?");
-			version.setInt(1, schema_version);
-			version.executeUpdate();
+			Statement version = sqlcon.createStatement();
+			version.executeUpdate("PRAGMA user_version = " + schema_version);
+			//version.setInt(1, schema_version);
+			//version.executeUpdate();
 
 			sqlcon.commit();
 			sqlcon.setAutoCommit(true);
